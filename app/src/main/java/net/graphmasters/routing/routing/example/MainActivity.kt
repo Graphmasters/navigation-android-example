@@ -18,6 +18,9 @@ import com.mapbox.geojson.Point
 import com.mapbox.mapboxsdk.Mapbox
 import com.mapbox.mapboxsdk.camera.CameraPosition
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory
+import com.mapbox.mapboxsdk.location.LocationComponent
+import com.mapbox.mapboxsdk.location.LocationComponentActivationOptions
+import com.mapbox.mapboxsdk.location.modes.RenderMode
 import com.mapbox.mapboxsdk.maps.MapboxMap
 import com.mapbox.mapboxsdk.maps.Style
 import com.mapbox.mapboxsdk.style.layers.LineLayer
@@ -32,28 +35,18 @@ import net.graphmasters.core.units.Speed
 import net.graphmasters.routing.NavigationSdk
 import net.graphmasters.routing.model.Routable
 import net.graphmasters.routing.model.Route
-import net.graphmasters.routing.navigation.events.NavigationEventHandler
-import net.graphmasters.routing.navigation.route.RouteRepository
-import net.graphmasters.routing.navigation.route.provider.RouteProvider
-import net.graphmasters.routing.navigation.state.NavigationStateProvider
-import net.graphmasters.routing.navigation.state.NavigationStateProvider.NavigationState
-import okhttp3.*
-import okhttp3.logging.HttpLoggingInterceptor
+import net.graphmasters.routing.navigation.events.NavigationEventHandler.*
+import net.graphmasters.routing.navigation.state.NavigationStateProvider.*
 
 
 class MainActivity : AppCompatActivity(), LocationListener,
-    NavigationStateProvider.OnNavigationStateUpdatedListener, MapboxMap.OnMapLongClickListener,
-    NavigationEventHandler.OnNavigationStartedListener,
-    NavigationEventHandler.OnNavigationStoppedListener,
-    NavigationEventHandler.OnDestinationReachedListener,
-    NavigationEventHandler.OnRouteUpdateListener,
-    NavigationEventHandler.OnRouteRequestFailedListener,
-    NavigationStateProvider.OnNavigationStateInitializedListener,
-    RouteRepository.RouteUpdatedListener {
-
-    enum class CameraState {
-        FREE, FOLLOWING
-    }
+    OnNavigationStateUpdatedListener, MapboxMap.OnMapLongClickListener,
+    OnNavigationStartedListener,
+    OnNavigationStoppedListener,
+    OnDestinationReachedListener,
+    OnRouteUpdateListener,
+    OnRouteRequestFailedListener,
+    OnNavigationStateInitializedListener {
 
     companion object {
         const val TAG = "MainActivity"
@@ -93,6 +86,10 @@ class MainActivity : AppCompatActivity(), LocationListener,
 
                 this.initRouteLayer(it)
                 this.enableLocation()
+                this.enableLocationComponent(
+                    mapboxMap = mapboxMap,
+                    style = it
+                )
             }
         }
 
@@ -115,13 +112,25 @@ class MainActivity : AppCompatActivity(), LocationListener,
         navigationSdk.navigationStateProvider.addOnNavigationStateUpdatedListener(this)
         navigationSdk.navigationStateProvider.addOnNavigationStateInitializedListener(this)
 
-        navigationSdk.routeRepository.addRouteUpdatedListener(this)
-
         navigationSdk.navigationEngine.navigationEventHandler.addOnNavigationStartedListener(this)
         navigationSdk.navigationEngine.navigationEventHandler.addOnNavigationStoppedListener(this)
         navigationSdk.navigationEngine.navigationEventHandler.addOnDestinationReachedListener(this)
         navigationSdk.navigationEngine.navigationEventHandler.addOnRouteUpdateListener(this)
         navigationSdk.navigationEngine.navigationEventHandler.addOnRouteRequestFailedListener(this)
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun enableLocationComponent(mapboxMap: MapboxMap, style: Style) {
+        val locationComponent: LocationComponent = mapboxMap.locationComponent
+
+        val locationComponentActivationOptions: LocationComponentActivationOptions =
+            LocationComponentActivationOptions.builder(this, style)
+                .useDefaultLocationEngine(false)
+                .build()
+        locationComponent.activateLocationComponent(locationComponentActivationOptions);
+
+        locationComponent.isLocationComponentEnabled = true;
+        locationComponent.renderMode = RenderMode.GPS;
     }
 
     private fun initRouteLayer(style: Style) {
@@ -259,6 +268,8 @@ class MainActivity : AppCompatActivity(), LocationListener,
                 )
             }
 
+            this.mapboxMap!!.locationComponent.forceLocationUpdate(location)
+
             this.navigationSdk.updateLocation(
                 location = net.graphmasters.routing.model.Location(
                     provider = it.provider,
@@ -295,18 +306,6 @@ class MainActivity : AppCompatActivity(), LocationListener,
 
     override fun onDestinationReached(routable: Routable) {
         Log.d(TAG, "onDestinationReached $routable")
-    }
-
-    override fun onRouteUpdateCanceled(routeRequest: RouteProvider.RouteRequest) {
-        Log.d(TAG, "onRouteUpdateCanceled $routeRequest")
-    }
-
-    override fun onRouteUpdateFailed(e: Exception) {
-        Log.d(TAG, "onRouteUpdateFailed $e")
-    }
-
-    override fun onRouteUpdateStarted(routeRequest: RouteProvider.RouteRequest) {
-        Log.d(TAG, "onRouteUpdateStarted $routeRequest")
     }
 
     override fun onRouteUpdated(route: Route) {
