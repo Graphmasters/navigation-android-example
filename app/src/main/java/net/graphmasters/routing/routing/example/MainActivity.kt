@@ -8,12 +8,16 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
-import android.os.Handler
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.mapbox.geojson.Feature
+import com.mapbox.geojson.LineString
+import com.mapbox.geojson.Point
 import com.mapbox.mapboxsdk.Mapbox
+import com.mapbox.mapboxsdk.camera.CameraPosition
+import com.mapbox.mapboxsdk.camera.CameraUpdateFactory
 import com.mapbox.mapboxsdk.maps.MapboxMap
 import com.mapbox.mapboxsdk.maps.Style
 import com.mapbox.mapboxsdk.style.layers.LineLayer
@@ -29,8 +33,12 @@ import net.graphmasters.routing.NavigationSdk
 import net.graphmasters.routing.model.Routable
 import net.graphmasters.routing.model.Route
 import net.graphmasters.routing.navigation.events.NavigationEventHandler
+import net.graphmasters.routing.navigation.route.RouteRepository
+import net.graphmasters.routing.navigation.route.provider.RouteProvider
 import net.graphmasters.routing.navigation.state.NavigationStateProvider
 import net.graphmasters.routing.navigation.state.NavigationStateProvider.NavigationState
+import okhttp3.*
+import okhttp3.logging.HttpLoggingInterceptor
 
 
 class MainActivity : AppCompatActivity(), LocationListener,
@@ -39,21 +47,35 @@ class MainActivity : AppCompatActivity(), LocationListener,
     NavigationEventHandler.OnNavigationStoppedListener,
     NavigationEventHandler.OnDestinationReachedListener,
     NavigationEventHandler.OnRouteUpdateListener,
-    NavigationEventHandler.OnRouteRequestFailedListener {
+    NavigationEventHandler.OnRouteRequestFailedListener,
+    NavigationStateProvider.OnNavigationStateInitializedListener,
+    RouteRepository.RouteUpdatedListener {
+
+    enum class CameraState {
+        FREE, FOLLOWING
+    }
 
     companion object {
         const val TAG = "MainActivity"
 
         const val LOCATION_PERMISSION_REQUEST_CODE = 1
 
-        const val ROUTE_LAYER_ID = "route-layer"
+        const val ROUTE_OUTLINE_LAYER_ID = "route-outline-layer"
+
+        const val ROUTE_LINE_LAYER_ID = "route-layer"
 
         const val ROUTE_SOURCE_ID = "route-source"
     }
 
+    private lateinit var routeSource: GeoJsonSource
+
+    private lateinit var navigationSdk: NavigationSdk
+
     private lateinit var locationManager: LocationManager
 
-    private lateinit var mapboxMap: MapboxMap
+    private var mapboxMap: MapboxMap? = null
+
+    private var lastLocation: Location? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -67,18 +89,41 @@ class MainActivity : AppCompatActivity(), LocationListener,
             mapboxMap.setStyle(Style.MAPBOX_STREETS) {
                 Log.d(TAG, "Map ready")
                 this.mapboxMap = mapboxMap
-                this.mapboxMap.addOnMapLongClickListener(this)
+                mapboxMap.addOnMapLongClickListener(this)
 
                 this.initRouteLayer(it)
                 this.enableLocation()
             }
         }
 
-        NavigationSdk.init(
+        val interceptor = HttpLoggingInterceptor(object : HttpLoggingInterceptor.Logger {
+            override fun log(message: String) {
+                Log.d(TAG, message)
+            }
+        })
+        interceptor.setLevel(HttpLoggingInterceptor.Level.BODY)
+
+        val client = OkHttpClient.Builder()
+            .authenticator(
+                object : Authenticator {
+                    override fun authenticate(route: okhttp3.Route?, response: Response): Request? {
+                        val credential: String = Credentials.basic(
+                            BuildConfig.NUNAV_USERNAME,
+                            BuildConfig.NUNAV_PASSWORD
+                        )
+                        return response.request.newBuilder().header("Authorization", credential)
+                            .build()
+                    }
+                }
+            )
+            .addInterceptor(interceptor)
+            .build()
+
+        this.navigationSdk = NavigationSdk(
             config = NavigationSdk.Config(
                 username = BuildConfig.NUNAV_USERNAME,
                 password = BuildConfig.NUNAV_PASSWORD,
-                serviceUrl = BuildConfig.NUNAV_SERVICE_URL,
+                serviceUrl = "https://nunav-android-bff-routing.graphmasters.net/v2/routing/",
                 instanceId = "dev"
             ),
             timeProvider = object : TimeProvider {
@@ -87,30 +132,42 @@ class MainActivity : AppCompatActivity(), LocationListener,
                         return System.currentTimeMillis()
                     }
             },
-            mainThreadExecutor = MainThreadExecutor(Handler())
+            client = client,
+            executorProvider = AndroidExecutorProvider()
         )
 
-        NavigationSdk.navigationStateProvider.addOnNavigationStateUpdatedListener(this)
+        navigationSdk.navigationStateProvider.addOnNavigationStateUpdatedListener(this)
+        navigationSdk.navigationStateProvider.addOnNavigationStateInitializedListener(this)
 
-        NavigationSdk.navigationEngine.navigationEventHandler.addOnNavigationStartedListener(this)
-        NavigationSdk.navigationEngine.navigationEventHandler.addOnNavigationStoppedListener(this)
-        NavigationSdk.navigationEngine.navigationEventHandler.addOnDestinationReachedListener(this)
-        NavigationSdk.navigationEngine.navigationEventHandler.addOnRouteUpdateListener(this)
-        NavigationSdk.navigationEngine.navigationEventHandler.addOnRouteRequestFailedListener(this)
+        navigationSdk.routeRepository.addRouteUpdatedListener(this)
 
+        navigationSdk.navigationEngine.navigationEventHandler.addOnNavigationStartedListener(this)
+        navigationSdk.navigationEngine.navigationEventHandler.addOnNavigationStoppedListener(this)
+        navigationSdk.navigationEngine.navigationEventHandler.addOnDestinationReachedListener(this)
+        navigationSdk.navigationEngine.navigationEventHandler.addOnRouteUpdateListener(this)
+        navigationSdk.navigationEngine.navigationEventHandler.addOnRouteRequestFailedListener(this)
     }
 
     private fun initRouteLayer(style: Style) {
-        style.addSource(GeoJsonSource(ROUTE_SOURCE_ID))
+        this.routeSource = GeoJsonSource(ROUTE_SOURCE_ID)
+        style.addSource(this.routeSource)
 
-        val lineLayer = LineLayer(ROUTE_LAYER_ID, ROUTE_SOURCE_ID).withProperties(
-            lineColor("#0000ff"),
-            lineWidth(10f),
-            lineCap(Property.LINE_CAP_ROUND)
-        )
-        lineLayer.minZoom = 0f
         style.addLayer(
-            lineLayer
+            LineLayer(ROUTE_OUTLINE_LAYER_ID, ROUTE_SOURCE_ID).withProperties(
+                lineColor("#005f97"),
+                lineWidth(10f),
+                lineCap(Property.LINE_CAP_ROUND),
+                lineJoin(Property.LINE_JOIN_ROUND)
+            )
+        )
+
+        style.addLayer(
+            LineLayer(ROUTE_LINE_LAYER_ID, ROUTE_SOURCE_ID).withProperties(
+                lineColor("#4b8cc8"),
+                lineWidth(7f),
+                lineCap(Property.LINE_CAP_ROUND),
+                lineJoin(Property.LINE_JOIN_ROUND)
+            )
         )
     }
 
@@ -199,19 +256,34 @@ class MainActivity : AppCompatActivity(), LocationListener,
         mapView?.onSaveInstanceState(outState)
     }
 
-    override fun onMapLongClick(point: com.mapbox.mapboxsdk.geometry.LatLng): Boolean =
-        if (NavigationSdk.initialized) {
-            NavigationSdk.navigationEngine.startNavigation(
-                Routable.fromLatLng(LatLng(point.latitude, point.longitude))
-            )
-            true
-        } else {
-            false
-        }
+    override fun onMapLongClick(point: com.mapbox.mapboxsdk.geometry.LatLng): Boolean {
+        navigationSdk.navigationEngine.startNavigation(
+            Routable.fromLatLng(LatLng(point.latitude, point.longitude))
+        )
+
+        return true
+    }
 
     override fun onLocationChanged(location: Location?) {
         location?.let {
-            NavigationSdk.updateLocation(
+            if (lastLocation == null) {
+                this.lastLocation = location
+                this.mapboxMap?.animateCamera(
+                    CameraUpdateFactory.newCameraPosition(
+                        CameraPosition.Builder()
+                            .zoom(15.0)
+                            .target(
+                                com.mapbox.mapboxsdk.geometry.LatLng(
+                                    location.latitude,
+                                    location.longitude
+                                )
+                            ).build()
+                    ),
+                    2000
+                )
+            }
+
+            this.navigationSdk.updateLocation(
                 location = net.graphmasters.routing.model.Location(
                     provider = it.provider,
                     timestamp = it.time,
@@ -237,17 +309,6 @@ class MainActivity : AppCompatActivity(), LocationListener,
         Log.d(TAG, "onProviderDisabled $provider")
     }
 
-    override fun onNavigationStateUpdated(navigationState: NavigationState) {
-        // The NavigationState contains all relevant data for the current navigation session
-        navigationState.route?.let {
-            this.drawRoute(it)
-        }
-    }
-
-    private fun drawRoute(route: Route) {
-        Log.d(TAG, "drawRoute $route")
-    }
-
     override fun onNavigationStarted(routable: Routable) {
         Log.d(TAG, "onNavigationStarted $routable")
     }
@@ -260,6 +321,18 @@ class MainActivity : AppCompatActivity(), LocationListener,
         Log.d(TAG, "onDestinationReached $routable")
     }
 
+    override fun onRouteUpdateCanceled(routeRequest: RouteProvider.RouteRequest) {
+        Log.d(TAG, "onRouteUpdateCanceled $routeRequest")
+    }
+
+    override fun onRouteUpdateFailed(e: Exception) {
+        Log.d(TAG, "onRouteUpdateFailed $e")
+    }
+
+    override fun onRouteUpdateStarted(routeRequest: RouteProvider.RouteRequest) {
+        Log.d(TAG, "onRouteUpdateStarted $routeRequest")
+    }
+
     override fun onRouteUpdated(route: Route) {
         Log.d(TAG, "onRouteUpdated $route")
     }
@@ -269,4 +342,23 @@ class MainActivity : AppCompatActivity(), LocationListener,
     }
 
 
+    override fun onNavigationStateInitialized(navigationState: NavigationState) {
+        Log.d(TAG, "onNavigationStateInitialized $navigationState")
+    }
+
+    override fun onNavigationStateUpdated(navigationState: NavigationState) {
+        // The NavigationState contains all relevant data for the current navigation session
+        navigationState.route?.let {
+            this.drawRoute(it.waypoints.filter { !it.reached }.map { it.latLng })
+        }
+    }
+
+    private fun drawRoute(latLng: List<LatLng>) {
+        val feature = Feature.fromGeometry(LineString.fromLngLats(latLng.map {
+            Point.fromLngLat(it.longitude, it.latitude)
+        }))
+
+
+        this.routeSource.setGeoJson(feature)
+    }
 }
