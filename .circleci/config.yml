@@ -23,7 +23,7 @@ approve_licenses: &approve_licenses
 
 version: 2
 jobs:
-  build_navigation:
+  build:
     docker: *build_image
     environment: *build_environment
     steps:
