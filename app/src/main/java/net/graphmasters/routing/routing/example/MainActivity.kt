@@ -268,7 +268,9 @@ class MainActivity : AppCompatActivity(), LocationListener,
                 )
             }
 
-            this.mapboxMap!!.locationComponent.forceLocationUpdate(location)
+            if (!this.navigationSdk.navigationStateProvider.navigationState.initialized) {
+                this.mapboxMap!!.locationComponent.forceLocationUpdate(location)
+            }
 
             this.navigationSdk.updateLocation(
                 location = net.graphmasters.routing.model.Location(
@@ -322,9 +324,30 @@ class MainActivity : AppCompatActivity(), LocationListener,
     }
 
     override fun onNavigationStateUpdated(navigationState: NavigationState) {
+        Log.d(TAG, "onNavigationStateUpdated")
+
         // The NavigationState contains all relevant data for the current navigation session
-        navigationState.route?.let {
-            this.drawRoute(it.waypoints.filter { !it.reached }.map { it.latLng })
+        navigationState.routeProgress?.let { routeProgress ->
+            routeProgress.currentLocation?.let {
+                val location = Location(it.provider)
+                location.latitude = it.latLng.latitude
+                location.longitude = it.latLng.longitude
+                location.bearing = if (it.heading != null) it.heading!!.toFloat() else 0f
+                location.speed = it.speed.ms().toFloat()
+                location.accuracy = it.accuracy.meters().toFloat()
+
+                this.mapboxMap!!.locationComponent.forceLocationUpdate(location)
+            }
+
+            this.drawRoute(routeProgress.currentLocation?.let {
+                val remainingRoute =
+                    it.route.waypoints.subList(
+                        it.segment.index + 1,
+                        it.route.waypoints.size
+                    ).map { it.latLng }.toMutableList()
+                remainingRoute.add(0, it.latLng)
+                remainingRoute
+            } ?: routeProgress.route.waypoints.map { it.latLng })
         }
     }
 
