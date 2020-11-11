@@ -238,14 +238,14 @@ class MainActivity : AppCompatActivity(), LocationListener,
     }
 
     override fun onNavigationStateUpdated(navigationState: NavigationState) {
-        // The NavigationState contains all relevated data for the current navigation session
+        // The NavigationState contains all relevant data for the current navigation session
         navigationState.route?.let {
             this.drawRoute(it)
         }
     }
 
     private fun drawRoute(route: Route) {
-
+        Log.d(TAG, "drawRoute $route")
     }
 
     override fun onNavigationStarted(routable: Routable) {
