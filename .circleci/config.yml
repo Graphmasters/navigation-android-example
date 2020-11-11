@@ -1,0 +1,63 @@
+build_image: &build_image
+  - image: circleci/android:api-30-node
+
+# Setup the build environment
+build_environment: &build_environment
+  - JVM_OPTS: -Xmx1024m
+
+attach_workspace: &attach_workspace
+  attach_workspace:
+    at: nunav/
+
+# downloads all android and java dependencies
+download_dependecies: &download_dependecies
+  run:
+    name: Download Dependencies
+    command: ./gradlew --no-daemon --max-workers 2 androidDependencies -Dorg.gradle.jvmargs=${JVM_OPTS}
+
+# Auto approves all licenses needed for new android libs
+approve_licenses: &approve_licenses
+  run:
+    name: Approve license for build tools
+    command: (echo y; echo y; echo y; echo y; echo y; echo y) | $ANDROID_HOME/cmdline-tools/tools/bin/sdkmanager --licenses
+
+# Assembles the release artifact
+assemble_release: &assemble_release
+  run:
+    name: Build
+    command: ./gradlew --no-daemon --max-workers 2 assemble${FLAVOR}Release
+
+version: 2
+jobs:
+  build_navigation:
+    docker: *build_image
+    environment: *build_environment
+    steps:
+      - checkout
+      - *attach_workspace
+      - *approve_licenses
+      - *download_dependecies
+      - *assemble_release
+
+workflows:
+  version: 2
+  build:
+    jobs:
+      - module_tests:
+          filters:
+            branches:
+              ignore:
+                - master
+                - dev
+      - app_tests:
+          filters:
+            branches:
+              ignore:
+                - master
+                - dev
+      - trip_module_tests:
+          filters:
+            branches:
+              ignore:
+                - master
+                - dev

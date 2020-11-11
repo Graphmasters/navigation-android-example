@@ -18,6 +18,20 @@ allprojects {
     repositories {
         google()
         jcenter()
+
+        maven {
+            url = "https://artifactory.graphmasters.net/artifactory/libs-release"
+            credentials {
+                username = System.getenv("ARTIFACTORY_USER")
+                password = System.getenv("ARTIFACTORY_PASSWORD")
+            }
+        }
+    }
+
+
+    configurations.all {
+        resolutionStrategy.cacheChangingModulesFor 15, 'seconds'
+        resolutionStrategy.cacheDynamicVersionsFor 15, 'seconds'
     }
 }
 
