@@ -25,7 +25,7 @@ approve_licenses: &approve_licenses
 assemble_release: &assemble_release
   run:
     name: Build
-    command: ./gradlew --no-daemon --max-workers 2 assemble${FLAVOR}Release
+    command: ./gradlew --no-daemon --max-workers 2 assemble
 
 version: 2
 jobs:
