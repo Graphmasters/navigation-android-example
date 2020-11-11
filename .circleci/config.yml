@@ -43,21 +43,4 @@ workflows:
   version: 2
   build:
     jobs:
-      - module_tests:
-          filters:
-            branches:
-              ignore:
-                - master
-                - dev
-      - app_tests:
-          filters:
-            branches:
-              ignore:
-                - master
-                - dev
-      - trip_module_tests:
-          filters:
-            branches:
-              ignore:
-                - master
-                - dev
+      - build_navigation
