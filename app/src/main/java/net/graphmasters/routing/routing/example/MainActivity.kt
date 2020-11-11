@@ -96,29 +96,6 @@ class MainActivity : AppCompatActivity(), LocationListener,
             }
         }
 
-        val interceptor = HttpLoggingInterceptor(object : HttpLoggingInterceptor.Logger {
-            override fun log(message: String) {
-                Log.d(TAG, message)
-            }
-        })
-        interceptor.setLevel(HttpLoggingInterceptor.Level.BODY)
-
-        val client = OkHttpClient.Builder()
-            .authenticator(
-                object : Authenticator {
-                    override fun authenticate(route: okhttp3.Route?, response: Response): Request? {
-                        val credential: String = Credentials.basic(
-                            BuildConfig.NUNAV_USERNAME,
-                            BuildConfig.NUNAV_PASSWORD
-                        )
-                        return response.request.newBuilder().header("Authorization", credential)
-                            .build()
-                    }
-                }
-            )
-            .addInterceptor(interceptor)
-            .build()
-
         this.navigationSdk = NavigationSdk(
             config = NavigationSdk.Config(
                 username = BuildConfig.NUNAV_USERNAME,
@@ -132,7 +109,6 @@ class MainActivity : AppCompatActivity(), LocationListener,
                         return System.currentTimeMillis()
                     }
             },
-            client = client,
             executorProvider = AndroidExecutorProvider()
         )
 
