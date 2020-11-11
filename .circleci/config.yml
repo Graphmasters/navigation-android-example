@@ -21,12 +21,6 @@ approve_licenses: &approve_licenses
     name: Approve license for build tools
     command: (echo y; echo y; echo y; echo y; echo y; echo y) | $ANDROID_HOME/cmdline-tools/tools/bin/sdkmanager --licenses
 
-# Assembles the release artifact
-assemble_release: &assemble_release
-  run:
-    name: Build
-    command: ./gradlew --no-daemon --max-workers 2 assemble
-
 version: 2
 jobs:
   build_navigation:
@@ -37,10 +31,12 @@ jobs:
       - *attach_workspace
       - *approve_licenses
       - *download_dependecies
-      - *assemble_release
+      - run:
+          name: Assemble
+          command: ./gradlew --no-daemon --max-workers 2 assemble
 
 workflows:
   version: 2
   build:
     jobs:
-      - build_navigation
+      - build
