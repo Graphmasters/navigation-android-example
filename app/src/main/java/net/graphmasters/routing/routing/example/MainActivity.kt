@@ -26,13 +26,20 @@ import net.graphmasters.core.time.TimeProvider
 import net.graphmasters.core.units.Length
 import net.graphmasters.core.units.Speed
 import net.graphmasters.routing.NavigationSdk
+import net.graphmasters.routing.model.Routable
 import net.graphmasters.routing.model.Route
+import net.graphmasters.routing.navigation.events.NavigationEventHandler
 import net.graphmasters.routing.navigation.state.NavigationStateProvider
 import net.graphmasters.routing.navigation.state.NavigationStateProvider.NavigationState
 
 
 class MainActivity : AppCompatActivity(), LocationListener,
-    NavigationStateProvider.OnNavigationStateUpdatedListener {
+    NavigationStateProvider.OnNavigationStateUpdatedListener, MapboxMap.OnMapLongClickListener,
+    NavigationEventHandler.OnNavigationStartedListener,
+    NavigationEventHandler.OnNavigationStoppedListener,
+    NavigationEventHandler.OnDestinationReachedListener,
+    NavigationEventHandler.OnRouteUpdateListener,
+    NavigationEventHandler.OnRouteRequestFailedListener {
 
     companion object {
         const val TAG = "MainActivity"
@@ -57,9 +64,10 @@ class MainActivity : AppCompatActivity(), LocationListener,
 
         mapView?.onCreate(savedInstanceState)
         mapView?.getMapAsync { mapboxMap ->
-            this.mapboxMap.setStyle(Style.MAPBOX_STREETS) {
+            mapboxMap.setStyle(Style.MAPBOX_STREETS) {
                 Log.d(TAG, "Map ready")
                 this.mapboxMap = mapboxMap
+                this.mapboxMap.addOnMapLongClickListener(this)
 
                 this.initRouteLayer(it)
                 this.enableLocation()
@@ -83,7 +91,13 @@ class MainActivity : AppCompatActivity(), LocationListener,
         )
 
         NavigationSdk.navigationStateProvider.addOnNavigationStateUpdatedListener(this)
-        NavigationSdk.navigationEngine.startNavigation()
+
+        NavigationSdk.navigationEngine.navigationEventHandler.addOnNavigationStartedListener(this)
+        NavigationSdk.navigationEngine.navigationEventHandler.addOnNavigationStoppedListener(this)
+        NavigationSdk.navigationEngine.navigationEventHandler.addOnDestinationReachedListener(this)
+        NavigationSdk.navigationEngine.navigationEventHandler.addOnRouteUpdateListener(this)
+        NavigationSdk.navigationEngine.navigationEventHandler.addOnRouteRequestFailedListener(this)
+
     }
 
     private fun initRouteLayer(style: Style) {
@@ -185,9 +199,17 @@ class MainActivity : AppCompatActivity(), LocationListener,
         mapView?.onSaveInstanceState(outState)
     }
 
-    override fun onLocationChanged(location: Location?) {
-        Log.d(TAG, location?.toString())
+    override fun onMapLongClick(point: com.mapbox.mapboxsdk.geometry.LatLng): Boolean =
+        if (NavigationSdk.initialized) {
+            NavigationSdk.navigationEngine.startNavigation(
+                Routable.fromLatLng(LatLng(point.latitude, point.longitude))
+            )
+            true
+        } else {
+            false
+        }
 
+    override fun onLocationChanged(location: Location?) {
         location?.let {
             NavigationSdk.updateLocation(
                 location = net.graphmasters.routing.model.Location(
@@ -216,6 +238,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
     }
 
     override fun onNavigationStateUpdated(navigationState: NavigationState) {
+        // The NavigationState contains all relevated data for the current navigation session
         navigationState.route?.let {
             this.drawRoute(it)
         }
@@ -224,4 +247,26 @@ class MainActivity : AppCompatActivity(), LocationListener,
     private fun drawRoute(route: Route) {
 
     }
+
+    override fun onNavigationStarted(routable: Routable) {
+        Log.d(TAG, "onNavigationStarted $routable")
+    }
+
+    override fun onNavigationStopped() {
+        Log.d(TAG, "onNavigationStopped")
+    }
+
+    override fun onDestinationReached(routable: Routable) {
+        Log.d(TAG, "onDestinationReached $routable")
+    }
+
+    override fun onRouteUpdated(route: Route) {
+        Log.d(TAG, "onRouteUpdated $route")
+    }
+
+    override fun onRouteRequestFailed(e: Exception) {
+        Log.d(TAG, "onRouteRequestFailed $e")
+    }
+
+
 }
