@@ -298,6 +298,15 @@ class MainActivity : AppCompatActivity(), LocationListener,
         mapView?.onSaveInstanceState(outState)
     }
 
+    override fun onBackPressed() {
+        if (this.navigationSdk.navigationStateProvider.navigationState.currentlyNavigating) {
+            this.navigationSdk.navigationEngine.stopNavigation()
+            this.drawRoute(emptyList())
+        } else {
+            super.onBackPressed()
+        }
+    }
+
     override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {
         Log.d(TAG, "onStatusChanged $provider")
     }
@@ -316,6 +325,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
     }
 
     override fun onNavigationStopped() {
+        Toast.makeText(this, "onNavigationStopped", Toast.LENGTH_SHORT).show()
         Log.d(TAG, "onNavigationStopped")
     }
 
@@ -354,7 +364,11 @@ class MainActivity : AppCompatActivity(), LocationListener,
 
             // Updating the Mapbox position icon with the location on the route instead of the raw one received from the GPS
             routeProgress.currentLocationOnRoute?.let {
-                this.mapboxMap?.locationComponent?.forceLocationUpdate(EntityConverter.convert(it))
+                this.mapboxMap?.locationComponent?.forceLocationUpdate(
+                    EntityConverter.convert(
+                        it
+                    )
+                )
             }
 
             // Draw the current route on the map
