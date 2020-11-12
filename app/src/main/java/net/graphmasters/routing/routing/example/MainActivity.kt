@@ -30,15 +30,14 @@ import com.mapbox.mapboxsdk.style.layers.PropertyFactory.*
 import com.mapbox.mapboxsdk.style.sources.GeoJsonSource
 import kotlinx.android.synthetic.main.activity_main.*
 import net.graphmasters.core.model.LatLng
-import net.graphmasters.core.time.TimeProvider
-import net.graphmasters.core.units.Length
-import net.graphmasters.core.units.Speed
 import net.graphmasters.routing.NavigationSdk
 import net.graphmasters.routing.model.Routable
 import net.graphmasters.routing.model.Route
 import net.graphmasters.routing.navigation.events.NavigationEventHandler.*
+import net.graphmasters.routing.navigation.progress.RouteProgressTracker.RouteProgress
 import net.graphmasters.routing.navigation.state.NavigationStateProvider.*
 import net.graphmasters.routing.routing.example.concurrency.MainThreadExecutor
+import net.graphmasters.routing.routing.example.utils.EntityConverter
 
 
 class MainActivity : AppCompatActivity(), LocationListener,
@@ -153,28 +152,21 @@ class MainActivity : AppCompatActivity(), LocationListener,
         }
     }
 
-
     private fun initializeNavigationSDK() {
         this.navigationSdk = NavigationSdk(
             config = NavigationSdk.Config(
                 username = BuildConfig.NUNAV_USERNAME,
                 password = BuildConfig.NUNAV_PASSWORD,
                 serviceUrl = BuildConfig.NUNAV_SERVICE_URL,
-                instanceId = "dev" // Unique id for each device running the SDK. i.e DeviceId
+                instanceId = "**Unique id for each device running the SDK. i.e DeviceId**"
             ),
-            timeProvider = object : TimeProvider {
-                override val currentTimeMillis: Long
-                    get() {
-                        return System.currentTimeMillis()
-                    }
-            },
             mainExecutor = MainThreadExecutor(Handler())
         )
 
         // Navigation state provides all necessary info about the current routing session.
         // By registering listeners you can be informed about any changes.
         navigationSdk.navigationStateProvider.addOnNavigationStateUpdatedListener(this)
-        // If the navigation state is initialized the RouteProgress is available, containg all relevant routing info
+        // If the navigation state is initialized the RouteProgress is available, containing all relevant routing info
         navigationSdk.navigationStateProvider.addOnNavigationStateInitializedListener(this)
 
         // Several navigation events
@@ -228,8 +220,6 @@ class MainActivity : AppCompatActivity(), LocationListener,
     }
 
 
-
-
     override fun onMapLongClick(point: com.mapbox.mapboxsdk.geometry.LatLng): Boolean {
         this.navigationSdk.navigationEngine.startNavigation(
             Routable.fromLatLng(LatLng(point.latitude, point.longitude))
@@ -261,16 +251,9 @@ class MainActivity : AppCompatActivity(), LocationListener,
                 this.mapboxMap!!.locationComponent.forceLocationUpdate(location)
             }
 
+            // Publish the current location to the SDK
             this.navigationSdk.updateLocation(
-                location = net.graphmasters.routing.model.Location(
-                    provider = it.provider,
-                    timestamp = it.time,
-                    latLng = LatLng(it.latitude, it.longitude),
-                    altitude = if (it.hasAltitude()) Length.fromMeters(it.altitude) else Length.UNDEFINED,
-                    heading = if (it.hasBearing()) it.bearing.toDouble() else null,
-                    speed = if (it.hasSpeed()) Speed.fromMs(it.speed.toDouble()) else Speed.UNDEFINED,
-                    accuracy = if (it.hasAccuracy()) Length.fromMeters(it.accuracy.toDouble()) else Length.UNDEFINED
-                )
+                location = EntityConverter.convert(location)
             )
         }
     }
@@ -359,29 +342,25 @@ class MainActivity : AppCompatActivity(), LocationListener,
 
         // The NavigationState contains all relevant data for the current navigation session
         navigationState.routeProgress?.let { routeProgress ->
-            // Setting key navigation properties
-            this.nextMilestone.text = routeProgress.nextMilestone?.turnInfo?.turnCommand?.name
-            this.nextMilestoneDistance.text =
-                "${routeProgress.nextMilestoneDistance.meters().toInt()}m"
-            this.distanceDestination.text =
-                "${routeProgress.remainingDistance.meters().toInt()}m"
-            this.remainingTravelTime.text = "${routeProgress.remainingTravelTime.minutes()}min"
+            this.updateNavigationInfoViews(routeProgress)
 
-            // Updating the Mapbox position icon with the location on the route instead of the raw one recevied from the GPS
+            // Updating the Mapbox position icon with the location on the route instead of the raw one received from the GPS
             routeProgress.currentLocationOnRoute?.let {
-                val location = Location(it.provider)
-                location.latitude = it.latLng.latitude
-                location.longitude = it.latLng.longitude
-                location.bearing = if (it.heading != null) it.heading!!.toFloat() else 0f
-                location.speed = it.speed.ms().toFloat()
-                location.accuracy = it.accuracy.meters().toFloat()
-
-                this.mapboxMap!!.locationComponent.forceLocationUpdate(location)
+                this.mapboxMap?.locationComponent?.forceLocationUpdate(EntityConverter.convert(it))
             }
 
             // Draw the current route on the map
             this.drawRoute(routeProgress.route.waypoints.map { it.latLng })
         }
+    }
+
+    private fun updateNavigationInfoViews(routeProgress: RouteProgress) {
+        this.nextMilestone.text = routeProgress.nextMilestone?.turnInfo?.turnCommand?.name
+        this.nextMilestoneDistance.text =
+            "${routeProgress.nextMilestoneDistance.meters().toInt()}m"
+        this.distanceDestination.text =
+            "${routeProgress.remainingDistance.meters().toInt()}m"
+        this.remainingTravelTime.text = "${routeProgress.remainingTravelTime.minutes()}min"
     }
 
     private fun drawRoute(latLng: List<LatLng>) {
@@ -391,8 +370,6 @@ class MainActivity : AppCompatActivity(), LocationListener,
 
         this.routeSource.setGeoJson(feature)
     }
-
-
 
 
 }
