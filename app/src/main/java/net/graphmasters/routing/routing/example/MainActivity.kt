@@ -8,6 +8,7 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
+import android.os.Handler
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -37,6 +38,7 @@ import net.graphmasters.routing.model.Routable
 import net.graphmasters.routing.model.Route
 import net.graphmasters.routing.navigation.events.NavigationEventHandler.*
 import net.graphmasters.routing.navigation.state.NavigationStateProvider.*
+import net.graphmasters.routing.routing.example.concurrency.MainThreadExecutor
 
 
 class MainActivity : AppCompatActivity(), LocationListener,
@@ -46,7 +48,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
     OnDestinationReachedListener,
     OnRouteUpdateListener,
     OnRouteRequestFailedListener,
-    OnNavigationStateInitializedListener {
+    OnNavigationStateInitializedListener, OnLeavingDestinationListener, OnOffRouteListener {
 
     companion object {
         const val TAG = "MainActivity"
@@ -70,13 +72,25 @@ class MainActivity : AppCompatActivity(), LocationListener,
 
     private var lastLocation: Location? = null
 
+    private val locationPermissionGranted: Boolean
+        get() {
+            return ContextCompat.checkSelfPermission(
+                this, Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         Mapbox.getInstance(this, BuildConfig.MAPBOX_TOKEN);
-
         setContentView(R.layout.activity_main)
 
+
+        this.initMapbox(savedInstanceState)
+        this.initializeNavigationSDK()
+    }
+
+    private fun initMapbox(savedInstanceState: Bundle?) {
         mapView?.onCreate(savedInstanceState)
         mapView?.getMapAsync { mapboxMap ->
             mapboxMap.setStyle(Style.MAPBOX_STREETS) {
@@ -86,98 +100,17 @@ class MainActivity : AppCompatActivity(), LocationListener,
 
                 this.initRouteLayer(it)
                 this.enableLocation()
-                this.enableLocationComponent(
+                this.enableMapboxLocationComponent(
                     mapboxMap = mapboxMap,
                     style = it
                 )
-            }
-        }
-
-        this.navigationSdk = NavigationSdk(
-            config = NavigationSdk.Config(
-                username = BuildConfig.NUNAV_USERNAME,
-                password = BuildConfig.NUNAV_PASSWORD,
-                serviceUrl = "https://nunav-android-bff-routing.graphmasters.net/v2/routing/",
-                instanceId = "dev"
-            ),
-            timeProvider = object : TimeProvider {
-                override val currentTimeMillis: Long
-                    get() {
-                        return System.currentTimeMillis()
-                    }
-            },
-            executorProvider = AndroidExecutorProvider()
-        )
-
-        navigationSdk.navigationStateProvider.addOnNavigationStateUpdatedListener(this)
-        navigationSdk.navigationStateProvider.addOnNavigationStateInitializedListener(this)
-
-        navigationSdk.navigationEngine.navigationEventHandler.addOnNavigationStartedListener(this)
-        navigationSdk.navigationEngine.navigationEventHandler.addOnNavigationStoppedListener(this)
-        navigationSdk.navigationEngine.navigationEventHandler.addOnDestinationReachedListener(this)
-        navigationSdk.navigationEngine.navigationEventHandler.addOnRouteUpdateListener(this)
-        navigationSdk.navigationEngine.navigationEventHandler.addOnRouteRequestFailedListener(this)
-    }
-
-    @SuppressLint("MissingPermission")
-    private fun enableLocationComponent(mapboxMap: MapboxMap, style: Style) {
-        val locationComponent: LocationComponent = mapboxMap.locationComponent
-
-        val locationComponentActivationOptions: LocationComponentActivationOptions =
-            LocationComponentActivationOptions.builder(this, style)
-                .useDefaultLocationEngine(false)
-                .build()
-        locationComponent.activateLocationComponent(locationComponentActivationOptions);
-
-        locationComponent.isLocationComponentEnabled = true;
-        locationComponent.renderMode = RenderMode.GPS;
-    }
-
-    private fun initRouteLayer(style: Style) {
-        this.routeSource = GeoJsonSource(ROUTE_SOURCE_ID)
-        style.addSource(this.routeSource)
-
-        style.addLayer(
-            LineLayer(ROUTE_OUTLINE_LAYER_ID, ROUTE_SOURCE_ID).withProperties(
-                lineColor("#005f97"),
-                lineWidth(10f),
-                lineCap(Property.LINE_CAP_ROUND),
-                lineJoin(Property.LINE_JOIN_ROUND)
-            )
-        )
-
-        style.addLayer(
-            LineLayer(ROUTE_LINE_LAYER_ID, ROUTE_SOURCE_ID).withProperties(
-                lineColor("#4b8cc8"),
-                lineWidth(7f),
-                lineCap(Property.LINE_CAP_ROUND),
-                lineJoin(Property.LINE_JOIN_ROUND)
-            )
-        )
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-
-        when (requestCode) {
-            1 -> {
-                val permissionGranted =
-                    grantResults.getOrElse(0) { PackageManager.PERMISSION_DENIED } == PackageManager.PERMISSION_GRANTED
-
-                if (permissionGranted) {
-                    this.enableLocation()
-                }
             }
         }
     }
 
     @SuppressLint("MissingPermission")
     private fun enableLocation() {
-        if (this.hasPermission()) {
+        if (this.locationPermissionGranted) {
             this.locationManager =
                 this.getSystemService(Context.LOCATION_SERVICE) as LocationManager
             this.locationManager.getProvider(LocationManager.GPS_PROVIDER)?.let {
@@ -193,11 +126,6 @@ class MainActivity : AppCompatActivity(), LocationListener,
         }
     }
 
-    private fun hasPermission(): Boolean = ContextCompat.checkSelfPermission(
-        this,
-        Manifest.permission.ACCESS_FINE_LOCATION
-    ) == PackageManager.PERMISSION_GRANTED
-
     private fun requestLocationPermission() {
         ActivityCompat.requestPermissions(
             this,
@@ -206,43 +134,104 @@ class MainActivity : AppCompatActivity(), LocationListener,
         )
     }
 
-    public override fun onResume() {
-        super.onResume()
-        mapView?.onResume()
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+
+        when (requestCode) {
+            LOCATION_PERMISSION_REQUEST_CODE -> {
+                val permissionGranted =
+                    grantResults.getOrElse(0) { PackageManager.PERMISSION_DENIED } == PackageManager.PERMISSION_GRANTED
+
+                if (permissionGranted) {
+                    this.enableLocation()
+                }
+            }
+        }
     }
 
-    override fun onStart() {
-        super.onStart()
-        mapView?.onStart()
+
+    private fun initializeNavigationSDK() {
+        this.navigationSdk = NavigationSdk(
+            config = NavigationSdk.Config(
+                username = BuildConfig.NUNAV_USERNAME,
+                password = BuildConfig.NUNAV_PASSWORD,
+                serviceUrl = BuildConfig.NUNAV_SERVICE_URL,
+                instanceId = "dev" // Unique id for each device running the SDK. i.e DeviceId
+            ),
+            timeProvider = object : TimeProvider {
+                override val currentTimeMillis: Long
+                    get() {
+                        return System.currentTimeMillis()
+                    }
+            },
+            mainExecutor = MainThreadExecutor(Handler())
+        )
+
+        // Navigation state provides all necessary info about the current routing session.
+        // By registering listeners you can be informed about any changes.
+        navigationSdk.navigationStateProvider.addOnNavigationStateUpdatedListener(this)
+        // If the navigation state is initialized the RouteProgress is available, containg all relevant routing info
+        navigationSdk.navigationStateProvider.addOnNavigationStateInitializedListener(this)
+
+        // Several navigation events
+        navigationSdk.navigationEventHandler.addOnNavigationStartedListener(this)
+        navigationSdk.navigationEventHandler.addOnNavigationStoppedListener(this)
+        navigationSdk.navigationEventHandler.addOnRouteUpdateListener(this)
+        navigationSdk.navigationEventHandler.addOnRouteRequestFailedListener(this)
+        navigationSdk.navigationEventHandler.addOnDestinationReachedListener(this)
+        navigationSdk.navigationEventHandler.addOnLeavingDestinationListener(this)
+        navigationSdk.navigationEventHandler.addOnOffRouteListener(this)
     }
 
-    override fun onStop() {
-        super.onStop()
-        mapView?.onStop()
+    @SuppressLint("MissingPermission")
+    private fun enableMapboxLocationComponent(mapboxMap: MapboxMap, style: Style) {
+        val locationComponent: LocationComponent = mapboxMap.locationComponent
+
+        val locationComponentActivationOptions: LocationComponentActivationOptions =
+            LocationComponentActivationOptions.builder(this, style)
+                .useDefaultLocationEngine(false)
+                .build()
+        locationComponent.activateLocationComponent(locationComponentActivationOptions);
+
+        locationComponent.isLocationComponentEnabled = true;
+        locationComponent.renderMode = RenderMode.GPS;
     }
 
-    public override fun onPause() {
-        super.onPause()
-        mapView?.onPause()
+    private fun initRouteLayer(style: Style) {
+        //Creating source, which will be manipulated to display route changes
+        this.routeSource = GeoJsonSource(ROUTE_SOURCE_ID)
+        style.addSource(this.routeSource)
+
+        //Setup outline layer for the route
+        style.addLayer(
+            LineLayer(ROUTE_OUTLINE_LAYER_ID, ROUTE_SOURCE_ID).withProperties(
+                lineColor("#005f97"),
+                lineWidth(10f),
+                lineCap(Property.LINE_CAP_ROUND),
+                lineJoin(Property.LINE_JOIN_ROUND)
+            )
+        )
+
+        //Setup inner line layer for the route
+        style.addLayer(
+            LineLayer(ROUTE_LINE_LAYER_ID, ROUTE_SOURCE_ID).withProperties(
+                lineColor("#4b8cc8"),
+                lineWidth(7f),
+                lineCap(Property.LINE_CAP_ROUND),
+                lineJoin(Property.LINE_JOIN_ROUND)
+            )
+        )
     }
 
-    override fun onLowMemory() {
-        super.onLowMemory()
-        mapView?.onLowMemory()
-    }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        mapView?.onDestroy()
-    }
 
-    override fun onSaveInstanceState(outState: Bundle) {
-        super.onSaveInstanceState(outState)
-        mapView?.onSaveInstanceState(outState)
-    }
 
     override fun onMapLongClick(point: com.mapbox.mapboxsdk.geometry.LatLng): Boolean {
-        navigationSdk.navigationEngine.startNavigation(
+        this.navigationSdk.navigationEngine.startNavigation(
             Routable.fromLatLng(LatLng(point.latitude, point.longitude))
         )
 
@@ -286,6 +275,41 @@ class MainActivity : AppCompatActivity(), LocationListener,
         }
     }
 
+    public override fun onResume() {
+        super.onResume()
+        mapView?.onResume()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        mapView?.onStart()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        mapView?.onStop()
+    }
+
+    public override fun onPause() {
+        super.onPause()
+        mapView?.onPause()
+    }
+
+    override fun onLowMemory() {
+        super.onLowMemory()
+        mapView?.onLowMemory()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        mapView?.onDestroy()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        mapView?.onSaveInstanceState(outState)
+    }
+
     override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {
         Log.d(TAG, "onStatusChanged $provider")
     }
@@ -310,6 +334,10 @@ class MainActivity : AppCompatActivity(), LocationListener,
         Log.d(TAG, "onDestinationReached $routable")
     }
 
+    override fun onLeavingDestination(routable: Routable) {
+        Log.d(TAG, "onDestinationReached $routable")
+    }
+
     override fun onRouteUpdated(route: Route) {
         Log.d(TAG, "onRouteUpdated $route")
     }
@@ -318,17 +346,29 @@ class MainActivity : AppCompatActivity(), LocationListener,
         Log.d(TAG, "onRouteRequestFailed $e")
     }
 
+    override fun onOffRoute() {
+        Log.d(TAG, "onOffRoute")
+    }
 
     override fun onNavigationStateInitialized(navigationState: NavigationState) {
         Log.d(TAG, "onNavigationStateInitialized $navigationState")
     }
 
     override fun onNavigationStateUpdated(navigationState: NavigationState) {
-        Log.d(TAG, "onNavigationStateUpdated")
+        Log.d(TAG, "onNavigationStateUpdated $navigationState")
 
         // The NavigationState contains all relevant data for the current navigation session
         navigationState.routeProgress?.let { routeProgress ->
-            routeProgress.currentLocation?.let {
+            // Setting key navigation properties
+            this.nextMilestone.text = routeProgress.nextMilestone?.turnInfo?.turnCommand?.name
+            this.nextMilestoneDistance.text =
+                "${routeProgress.nextMilestoneDistance.meters().toInt()}m"
+            this.distanceDestination.text =
+                "${routeProgress.remainingDistance.meters().toInt()}m"
+            this.remainingTravelTime.text = "${routeProgress.remainingTravelTime.minutes()}min"
+
+            // Updating the Mapbox position icon with the location on the route instead of the raw one recevied from the GPS
+            routeProgress.currentLocationOnRoute?.let {
                 val location = Location(it.provider)
                 location.latitude = it.latLng.latitude
                 location.longitude = it.latLng.longitude
@@ -339,15 +379,8 @@ class MainActivity : AppCompatActivity(), LocationListener,
                 this.mapboxMap!!.locationComponent.forceLocationUpdate(location)
             }
 
-            this.drawRoute(routeProgress.currentLocation?.let {
-                val remainingRoute =
-                    it.route.waypoints.subList(
-                        it.segment.index + 1,
-                        it.route.waypoints.size
-                    ).map { it.latLng }.toMutableList()
-                remainingRoute.add(0, it.latLng)
-                remainingRoute
-            } ?: routeProgress.route.waypoints.map { it.latLng })
+            // Draw the current route on the map
+            this.drawRoute(routeProgress.route.waypoints.map { it.latLng })
         }
     }
 
@@ -356,7 +389,10 @@ class MainActivity : AppCompatActivity(), LocationListener,
             Point.fromLngLat(it.longitude, it.latitude)
         }))
 
-
         this.routeSource.setGeoJson(feature)
     }
+
+
+
+
 }
