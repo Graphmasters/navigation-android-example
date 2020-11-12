@@ -10,6 +10,7 @@ import android.location.LocationManager
 import android.os.Bundle
 import android.os.Handler
 import android.util.Log
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -30,6 +31,7 @@ import com.mapbox.mapboxsdk.style.layers.PropertyFactory.*
 import com.mapbox.mapboxsdk.style.sources.GeoJsonSource
 import kotlinx.android.synthetic.main.activity_main.*
 import net.graphmasters.core.model.LatLng
+import net.graphmasters.core.units.Duration
 import net.graphmasters.routing.NavigationSdk
 import net.graphmasters.routing.model.Routable
 import net.graphmasters.routing.model.Route
@@ -38,6 +40,7 @@ import net.graphmasters.routing.navigation.progress.RouteProgressTracker.RoutePr
 import net.graphmasters.routing.navigation.state.NavigationStateProvider.*
 import net.graphmasters.routing.routing.example.concurrency.MainThreadExecutor
 import net.graphmasters.routing.routing.example.utils.EntityConverter
+import net.graphmasters.routing.routing.example.utils.SystemUtils
 
 
 class MainActivity : AppCompatActivity(), LocationListener,
@@ -128,7 +131,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
     private fun requestLocationPermission() {
         ActivityCompat.requestPermissions(
             this,
-            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.VIBRATE),
             LOCATION_PERMISSION_REQUEST_CODE
         )
     }
@@ -221,6 +224,8 @@ class MainActivity : AppCompatActivity(), LocationListener,
 
 
     override fun onMapLongClick(point: com.mapbox.mapboxsdk.geometry.LatLng): Boolean {
+        SystemUtils.vibrate(this, Duration.fromMilliseconds(200))
+
         this.navigationSdk.navigationEngine.startNavigation(
             Routable.fromLatLng(LatLng(point.latitude, point.longitude))
         )
@@ -306,6 +311,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
     }
 
     override fun onNavigationStarted(routable: Routable) {
+        Toast.makeText(this, "onNavigationStarted", Toast.LENGTH_SHORT).show()
         Log.d(TAG, "onNavigationStarted $routable")
     }
 
@@ -330,10 +336,12 @@ class MainActivity : AppCompatActivity(), LocationListener,
     }
 
     override fun onOffRoute() {
+        Toast.makeText(this, "onOffRoute", Toast.LENGTH_SHORT).show()
         Log.d(TAG, "onOffRoute")
     }
 
     override fun onNavigationStateInitialized(navigationState: NavigationState) {
+        Toast.makeText(this, "onNavigationStateInitialized", Toast.LENGTH_SHORT).show()
         Log.d(TAG, "onNavigationStateInitialized $navigationState")
     }
 
@@ -370,6 +378,4 @@ class MainActivity : AppCompatActivity(), LocationListener,
 
         this.routeSource.setGeoJson(feature)
     }
-
-
 }
