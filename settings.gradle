@@ -1,2 +1,2 @@
 include ':app'
-rootProject.name = "routing-android-example"
+rootProject.name = "navigation-android-example"
