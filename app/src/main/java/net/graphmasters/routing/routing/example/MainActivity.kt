@@ -11,6 +11,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.util.Log
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -30,14 +31,18 @@ import com.mapbox.mapboxsdk.style.layers.Property
 import com.mapbox.mapboxsdk.style.layers.PropertyFactory.*
 import com.mapbox.mapboxsdk.style.sources.GeoJsonSource
 import kotlinx.android.synthetic.main.activity_main.*
-import net.graphmasters.core.model.LatLng
-import net.graphmasters.core.units.Duration
-import net.graphmasters.routing.NavigationSdk
-import net.graphmasters.routing.model.Routable
-import net.graphmasters.routing.model.Route
-import net.graphmasters.routing.navigation.events.NavigationEventHandler.*
-import net.graphmasters.routing.navigation.progress.RouteProgressTracker.RouteProgress
-import net.graphmasters.routing.navigation.state.NavigationStateProvider.*
+import net.graphmasters.multiplatform.core.model.LatLng
+import net.graphmasters.multiplatform.core.units.Duration
+import net.graphmasters.multiplatform.core.units.Length
+import net.graphmasters.multiplatform.navigation.NavigationSdk
+import net.graphmasters.multiplatform.navigation.model.Routable
+import net.graphmasters.multiplatform.navigation.model.Route
+import net.graphmasters.multiplatform.navigation.routing.events.NavigationEventHandler.*
+import net.graphmasters.multiplatform.navigation.routing.progress.RouteProgressTracker
+import net.graphmasters.multiplatform.navigation.routing.state.NavigationStateProvider.*
+import net.graphmasters.multiplatform.navigation.vehicle.CarConfig
+import net.graphmasters.multiplatform.navigation.vehicle.TruckConfig
+import net.graphmasters.multiplatform.navigation.vehicle.VehicleConfig
 import net.graphmasters.routing.routing.example.concurrency.MainThreadExecutor
 import net.graphmasters.routing.routing.example.utils.EntityConverter
 import net.graphmasters.routing.routing.example.utils.SystemUtils
@@ -62,7 +67,31 @@ class MainActivity : AppCompatActivity(), LocationListener,
         const val ROUTE_LINE_LAYER_ID = "route-layer"
 
         const val ROUTE_SOURCE_ID = "route-source"
+
+        private val TRUCK_CONFIG = TruckConfig(
+            weightKg = 13000.0,
+            height = Length.fromMeters(3.5),
+            width = Length.fromMeters(2.5),
+            length = Length.fromMeters(16.5),
+            trailerCount = 1
+        )
+
+        private val CAR_CONFIG = CarConfig()
     }
+
+    private var vehicleConfig: VehicleConfig = CAR_CONFIG
+        set(value) {
+            field = value
+
+            this.navigationSdk.vehicleConfig = value
+            this.vehicleConfigButton.setImageResource(
+                when (value) {
+                    is TruckConfig -> R.drawable.ic_round_truck_24
+                    else -> R.drawable.ic_round_car_24
+                }
+            )
+        }
+
 
     private lateinit var routeSource: GeoJsonSource
 
@@ -87,9 +116,36 @@ class MainActivity : AppCompatActivity(), LocationListener,
         Mapbox.getInstance(this, BuildConfig.MAPBOX_TOKEN);
         setContentView(R.layout.activity_main)
 
-
         this.initMapbox(savedInstanceState)
         this.initializeNavigationSDK()
+
+        this.vehicleConfigButton.setOnClickListener {
+            this.showVehicleConfigSelection()
+        }
+    }
+
+    private fun showVehicleConfigSelection() {
+        AlertDialog.Builder(this)
+            .setSingleChoiceItems(
+                arrayOf("Car", "Truck"), when (this.vehicleConfig) {
+                    is TruckConfig -> 1
+                    else -> 0
+                }
+            ) { dialog, which ->
+                kotlin.run {
+                    dialog.dismiss()
+                    this.vehicleConfig = when (which) {
+                        1 -> TRUCK_CONFIG
+                        else -> CAR_CONFIG
+                    }
+                }
+
+            }
+            .setNeutralButton(
+                "Cancel"
+            ) { dialog, _ -> dialog.dismiss() }
+            .show()
+
     }
 
     private fun initMapbox(savedInstanceState: Bundle?) {
@@ -161,25 +217,28 @@ class MainActivity : AppCompatActivity(), LocationListener,
                 username = BuildConfig.NUNAV_USERNAME,
                 password = BuildConfig.NUNAV_PASSWORD,
                 serviceUrl = BuildConfig.NUNAV_SERVICE_URL,
-                instanceId = "**Unique id for each device running the SDK. i.e DeviceId**"
+                instanceId = "android-navigation-example"
             ),
             mainExecutor = MainThreadExecutor(Handler())
         )
 
+        this.navigationSdk.vehicleConfig = this.vehicleConfig
+
         // Navigation state provides all necessary info about the current routing session.
         // By registering listeners you can be informed about any changes.
-        navigationSdk.navigationStateProvider.addOnNavigationStateUpdatedListener(this)
+        this.navigationSdk.navigationStateProvider.addOnNavigationStateUpdatedListener(this)
         // If the navigation state is initialized the RouteProgress is available, containing all relevant routing info
-        navigationSdk.navigationStateProvider.addOnNavigationStateInitializedListener(this)
+        this.navigationSdk.navigationStateProvider.addOnNavigationStateInitializedListener(this)
 
         // Several navigation events
-        navigationSdk.navigationEventHandler.addOnNavigationStartedListener(this)
-        navigationSdk.navigationEventHandler.addOnNavigationStoppedListener(this)
-        navigationSdk.navigationEventHandler.addOnRouteUpdateListener(this)
-        navigationSdk.navigationEventHandler.addOnRouteRequestFailedListener(this)
-        navigationSdk.navigationEventHandler.addOnDestinationReachedListener(this)
-        navigationSdk.navigationEventHandler.addOnLeavingDestinationListener(this)
-        navigationSdk.navigationEventHandler.addOnOffRouteListener(this)
+        this.navigationSdk.navigationEventHandler.addOnNavigationStartedListener(this)
+        this.navigationSdk.navigationEventHandler.addOnNavigationStoppedListener(this)
+        this.navigationSdk.navigationEventHandler.addOnRouteUpdateListener(this)
+        this.navigationSdk.navigationEventHandler.addOnRouteRequestFailedListener(this)
+        this.navigationSdk.navigationEventHandler.addOnDestinationReachedListener(this)
+        this.navigationSdk.navigationEventHandler.addOnLeavingDestinationListener(this)
+        this.navigationSdk.navigationEventHandler.addOnOffRouteListener(this)
+
     }
 
     @SuppressLint("MissingPermission")
@@ -226,9 +285,13 @@ class MainActivity : AppCompatActivity(), LocationListener,
     override fun onMapLongClick(point: com.mapbox.mapboxsdk.geometry.LatLng): Boolean {
         SystemUtils.vibrate(this, Duration.fromMilliseconds(200))
 
-        this.navigationSdk.navigationEngine.startNavigation(
-            Routable.fromLatLng(LatLng(point.latitude, point.longitude))
-        )
+        try {
+            this.navigationSdk.navigationEngine.startNavigation(
+                Routable.fromLatLng(LatLng(point.latitude, point.longitude))
+            )
+        } catch (e: Exception) {
+            Toast.makeText(this, e.message, Toast.LENGTH_LONG).show()
+        }
 
         return true
     }
@@ -376,7 +439,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
         }
     }
 
-    private fun updateNavigationInfoViews(routeProgress: RouteProgress) {
+    private fun updateNavigationInfoViews(routeProgress: RouteProgressTracker.RouteProgress) {
         this.nextMilestone.text = routeProgress.nextMilestone?.turnInfo?.turnCommand?.name
         this.nextMilestoneDistance.text =
             "${routeProgress.nextMilestoneDistance.meters().toInt()}m"

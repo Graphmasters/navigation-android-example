@@ -1,14 +1,15 @@
 package net.graphmasters.routing.routing.example.utils
 
-import android.location.Location
-import net.graphmasters.core.model.LatLng
-import net.graphmasters.core.units.Length
-import net.graphmasters.core.units.Speed
+import android.location.Location as AndroidLocation
+import net.graphmasters.multiplatform.core.location.Location
+import net.graphmasters.multiplatform.core.model.LatLng
+import net.graphmasters.multiplatform.core.units.Length
+import net.graphmasters.multiplatform.core.units.Speed
 
 object EntityConverter {
 
-    fun convert(location: Location): net.graphmasters.routing.model.Location {
-        return net.graphmasters.routing.model.Location(
+    fun convert(location: AndroidLocation): Location {
+        return Location(
             provider = location.provider,
             timestamp = location.time,
             latLng = LatLng(location.latitude, location.longitude),
@@ -19,8 +20,8 @@ object EntityConverter {
         )
     }
 
-    fun convert(location: net.graphmasters.routing.model.Location): Location {
-        val androidLocation = Location(location.provider)
+    fun convert(location: Location): AndroidLocation {
+        val androidLocation = AndroidLocation(location.provider)
         androidLocation.latitude = location.latLng.latitude
         androidLocation.longitude = location.latLng.longitude
         androidLocation.bearing = if (location.heading != null) location.heading!!.toFloat() else 0f

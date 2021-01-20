@@ -1,10 +1,9 @@
 package net.graphmasters.routing.routing.example.utils
 
 import android.annotation.SuppressLint
-import android.app.Activity
 import android.content.Context
 import android.os.Vibrator
-import net.graphmasters.core.units.Duration
+import net.graphmasters.multiplatform.core.units.Duration
 
 object SystemUtils {
     @SuppressLint("MissingPermission")
