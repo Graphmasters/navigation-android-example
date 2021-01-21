@@ -9,7 +9,7 @@ android {
     buildToolsVersion "29.0.2"
 
     defaultConfig {
-        applicationId "net.graphmasters.routing.example"
+        applicationId "net.graphmasters.navigation.example"
         minSdkVersion 21
         targetSdkVersion 29
         versionCode 1
@@ -53,7 +53,7 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
 
     implementation 'com.mapbox.mapboxsdk:mapbox-android-sdk:8.3.0'
-    implementation('net.graphmasters.multiplatform:multiplatform-navigation-jvm:1.3.0-vehicle-config') {
+    implementation('net.graphmasters.multiplatform:multiplatform-navigation-jvm:1.3.0') {
         changing true
     }
 
