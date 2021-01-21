@@ -68,6 +68,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
 
         const val ROUTE_SOURCE_ID = "route-source"
 
+        // Predefined truck config. All the parameters are freely customizable
         private val TRUCK_CONFIG = TruckConfig(
             weightKg = 13000.0,
             height = Length.fromMeters(3.5),
@@ -76,6 +77,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
             trailerCount = 1
         )
 
+        // Default car config. Does not allow for specific vehicle properties
         private val CAR_CONFIG = CarConfig()
     }
 
@@ -222,6 +224,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
             mainExecutor = MainThreadExecutor(Handler())
         )
 
+        // The currently used vehicle config can be set at any time before or during the routing, altering the route request and returning an appropriate route
         this.navigationSdk.vehicleConfig = this.vehicleConfig
 
         // Navigation state provides all necessary info about the current routing session.
