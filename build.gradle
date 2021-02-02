@@ -21,10 +21,6 @@ allprojects {
 
         maven {
             url = "https://artifactory.graphmasters.net/artifactory/libs-release"
-            credentials {
-                username = System.getenv("ARTIFACTORY_USER")
-                password = System.getenv("ARTIFACTORY_PASSWORD")
-            }
         }
     }
 

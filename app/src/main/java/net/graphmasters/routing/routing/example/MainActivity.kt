@@ -35,6 +35,7 @@ import net.graphmasters.multiplatform.core.model.LatLng
 import net.graphmasters.multiplatform.core.units.Duration
 import net.graphmasters.multiplatform.core.units.Length
 import net.graphmasters.multiplatform.navigation.NavigationSdk
+import net.graphmasters.multiplatform.navigation.NavigationSdk.Config.ApiTokenAuthProvider
 import net.graphmasters.multiplatform.navigation.model.Routable
 import net.graphmasters.multiplatform.navigation.model.Route
 import net.graphmasters.multiplatform.navigation.routing.events.NavigationEventHandler.*
@@ -216,8 +217,14 @@ class MainActivity : AppCompatActivity(), LocationListener,
     private fun initializeNavigationSDK() {
         this.navigationSdk = NavigationSdk(
             config = NavigationSdk.Config(
-                username = BuildConfig.NUNAV_USERNAME,
-                password = BuildConfig.NUNAV_PASSWORD,
+//                Access possible via basic auth or api-token
+//                authProvider = BasicAuthProvider(
+//                    username = BuildConfig.NUNAV_USERNAME,
+//                    password = BuildConfig.NUNAV_PASSWORD,
+//                ),
+                authProvider = ApiTokenAuthProvider(
+                    apiToken = BuildConfig.NUNAV_API_TOKEN
+                ),
                 serviceUrl = BuildConfig.NUNAV_SERVICE_URL,
                 instanceId = "android-navigation-example"
             ),
@@ -290,7 +297,12 @@ class MainActivity : AppCompatActivity(), LocationListener,
 
         try {
             this.navigationSdk.navigationEngine.startNavigation(
-                Routable.fromLatLng(LatLng(point.latitude, point.longitude))
+                Routable.fromLatLng(
+                    net.graphmasters.multiplatform.core.model.LatLng(
+                        point.latitude,
+                        point.longitude
+                    )
+                )
             )
         } catch (e: Exception) {
             Toast.makeText(this, e.message, Toast.LENGTH_LONG).show()
@@ -403,7 +415,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
         Log.d(TAG, "onDestinationReached $routable")
     }
 
-    override fun onRouteUpdated(route: Route) {
+    override fun onRouteUpdated(route: net.graphmasters.multiplatform.navigation.model.Route) {
         Log.d(TAG, "onRouteUpdated $route")
     }
 
