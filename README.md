@@ -16,8 +16,7 @@ maven {
 }
 ```
 
-2. Update build config properites in the app `build.gradle`
-
+2. Update build config properites in the app's `build.gradle`
 
 * Replace API credentials and dedicated deployment URL
 ```buildConfigField "String", "NUNAV_USERNAME", "\"" + "NUNAV_USERNAME" + "\""
