@@ -32,9 +32,10 @@ buildConfigField "String", "NUNAV_SERVICE_URL", "\"" + "your_service_url" + "\""
 buildConfigField "String", "MAPBOX_TOKEN", "\"" + "your_mapbox_token" + "\""
 ```
 
-## Getting Started
+## Usage
 Once started the app requests permission to access the device location. After receiving a valid location, the camera will pan to that location.
 Via long press on the map a routing destination is set and a routing session is started. Toasts will give detailed information about navigation events.
+Back press will stop an active navigation.
 
 ## Contact
 info@graphmasters.net
