@@ -6,25 +6,13 @@ To serve as a hands on example, this project will demonstrate the integration an
 
 ## Getting Started
 
-1. Enter artifactory credentials in the project `build.gradle` file, to access the repository containing the dependency. Credentials can be provided by Graphmasters
+1. Update build config properites in the app's `build.gradle`
 
-```
-maven {
-  url = "https://artifactory.graphmasters.net/artifactory/libs-release"
-  credentials {
-    username = "ARTIFACTORY_USERNAME"
-    password = "ARTIFACTORY_PASSWORD"
-  }
-}
-```
-
-2. Update build config properites in the app's `build.gradle`
-
-* Replace API credentials and dedicated deployment/service URL
+* Replace API credentials depending on desired authentication method
 ```
 buildConfigField "String", "NUNAV_USERNAME", "\"" + "your_username" + "\""
 buildConfigField "String", "NUNAV_PASSWORD", "\"" + "your_password" + "\""
-buildConfigField "String", "NUNAV_SERVICE_URL", "\"" + "your_service_url" + "\""
+buildConfigField "String", "NUNAV_API_TOKEN", "\"" + "your_api_token" + "\""
 ```
 
 * For map rendering the Mapbox Android SDK is used. You can create a free account with them and create a test token.
