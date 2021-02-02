@@ -1,6 +1,6 @@
 ## About The Project
 
-To serve as a hands on example, this project will demonstrate the integration and usage of Graphmaster's `multiplatform-navigation` library.
+To serve as a hands on example, this project will demonstrate the integration and usage of Graphmaster's `multiplatform-navigation` library via a simple Android app.
 
 ## Getting Started
 
