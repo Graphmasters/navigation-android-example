@@ -2,6 +2,8 @@
 
 To serve as a hands on example, this project will demonstrate the integration and usage of Graphmaster's `multiplatform-navigation` library via a simple Android app.
 
+![Preview](https://github.com/Graphmasters/navigation-android-example/blob/main/preview.png)
+
 ## Getting Started
 
 1. Enter artifactory credentials in the project `build.gradle` file, to access the repository containing the dependency. Credentials can be provided by Graphmasters
