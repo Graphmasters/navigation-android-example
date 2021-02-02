@@ -4,7 +4,7 @@ To serve as a hands on example, this project will demonstrate the integration an
 
 ## Getting Started
 
-1. Setup artifactory credentials in the project `build.gradle` file, to access the repository containing the dependency. Credentials can be provided by Graphmasters
+1. Enter artifactory credentials in the project `build.gradle` file, to access the repository containing the dependency. Credentials can be provided by Graphmasters
 
 ```
 maven {
