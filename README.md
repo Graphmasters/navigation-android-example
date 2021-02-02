@@ -20,14 +20,14 @@ maven {
 
 * Replace API credentials and dedicated deployment URL
 ```
-buildConfigField "String", "NUNAV_USERNAME", "\"" + "NUNAV_USERNAME" + "\""
-buildConfigField "String", "NUNAV_PASSWORD", "\"" + "NUNAV_PASSWORD" + "\""
-buildConfigField "String", "NUNAV_SERVICE_URL", "\"" + "NUNAV_SERVICE_URL" + "\""
+buildConfigField "String", "NUNAV_USERNAME", "\"" + "your_username" + "\""
+buildConfigField "String", "NUNAV_PASSWORD", "\"" + "your_password" + "\""
+buildConfigField "String", "NUNAV_SERVICE_URL", "\"" + "your_service_url" + "\""
 ```
 
 * For map rendering the Mapbox Android SDK is used. You can create a free account with them and create a test token.
 ```
-buildConfigField "String", "MAPBOX_TOKEN", "\"" + "MAPBOX_TOKEN" + "\""
+buildConfigField "String", "MAPBOX_TOKEN", "\"" + "your_mapbox_token" + "\""
 ```
 
 ## Getting Started
