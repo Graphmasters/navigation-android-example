@@ -1,10 +1,10 @@
 ## About The Project
 
-To serve as a hands on example, this project will demenstrate the integration and usage of Graphmaster's `multiplatform-navigation` library.
+To serve as a hands on example, this project will demonstrate the integration and usage of Graphmaster's `multiplatform-navigation` library.
 
 ## Getting Started
 
-1. Setup artifactory credentials in the project `build.gradle` file. Credentials can be provided by Graphmasters
+1. Setup artifactory credentials in the project `build.gradle` file, to access the repository containing the dependency. Credentials can be provided by Graphmasters
 
 ```
 maven {
