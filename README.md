@@ -12,7 +12,7 @@ maven {
   credentials {
     username = "ARTIFACTORY_USERNAME"
     password = "ARTIFACTORY_PASSWORD"
-    }
+  }
 }
 ```
 
