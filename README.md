@@ -32,6 +32,20 @@ Once started the app requests permission to access the device location. After re
 Via long press on the map a destination is set and a navigation session is started. Toasts will give detailed information about navigation events.
 Back press will stop an active navigation.
 
+## Integration
+
+* Repository
+```
+maven {
+    url = "https://artifactory.graphmasters.net/artifactory/libs-release"
+}
+```
+
+* Gradle dependency
+```
+implementation 'net.graphmasters.multiplatform:multiplatform-navigation-aar:{VERSION}'
+```
+
 ## Contact
 info@graphmasters.net
 
