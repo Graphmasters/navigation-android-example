@@ -6,11 +6,11 @@ To serve as a hands on example, this project will demonstrate the integration an
 
 ## Getting Started
 
-1. Set API-Token either in the app's `build.gradle`...
+1. Set API-Token either in the app's `build.gradle` ...
 ```
 buildConfigField "String", "NUNAV_API_TOKEN", "\"" + "your_api_token" + "\""
 ```
-...or directly in code
+... or directly in code
 ```
 this.navigationSdk = NavigationSdk(
     context = this,
@@ -18,11 +18,11 @@ this.navigationSdk = NavigationSdk(
 )
 ```
 
-1. For map rendering the Mapbox Android SDK is used. You can create a free account with them and create a test token. Apply the token either in the app's `build.gradle`...
+1. For map rendering the Mapbox Android SDK is used. You can create a free account with them and create a test token. Apply the token either in the app's `build.gradle` ...
 ```
 buildConfigField "String", "MAPBOX_TOKEN", "\"" + "your_mapbox_token" + "\""
 ```
-...or directly in code
+... or directly in code
 ```
 Mapbox.getInstance(this, "your_mapbox_token");
 ```
