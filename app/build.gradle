@@ -17,14 +17,11 @@ android {
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
-        buildConfigField "String", "NUNAV_SERVICE_URL", "\"https://navigation-sandbox.nunav.net/v2/routing/\""
 
-//        The app supports basic auth and api-token based authentication
-        buildConfigField "String", "NUNAV_USERNAME", "\"" + System.getenv("NUNAV_USERNAME") + "\""
-        buildConfigField "String", "NUNAV_PASSWORD", "\"" + System.getenv("NUNAV_PASSWORD") + "\""
-        buildConfigField "String", "NUNAV_API_TOKEN", "\"" + System.getenv("NUNAV_API_TOKEN") + "\""
+        // Api key used to access NUNAV services
+        buildConfigField "String", "NUNAV_API_KEY", "\"" + System.getenv("NUNAV_API_TOKEN") + "\""
 
-//        Mapbox token to load map data
+        // Mapbox token to load map data
         buildConfigField "String", "MAPBOX_TOKEN", "\"" + System.getenv("MAPBOX_TOKEN") + "\""
     }
 
@@ -58,9 +55,7 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
 
     implementation 'com.mapbox.mapboxsdk:mapbox-android-sdk:8.3.0'
-    implementation('net.graphmasters.multiplatform:multiplatform-navigation-jvm:1.3.2') {
-        changing true
-    }
+    implementation 'net.graphmasters.multiplatform:multiplatform-navigation-aar:1.4.0'
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 

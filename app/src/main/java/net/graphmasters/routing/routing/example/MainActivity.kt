@@ -8,7 +8,6 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
-import android.os.Handler
 import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -35,7 +34,6 @@ import net.graphmasters.multiplatform.core.model.LatLng
 import net.graphmasters.multiplatform.core.units.Duration
 import net.graphmasters.multiplatform.core.units.Length
 import net.graphmasters.multiplatform.navigation.NavigationSdk
-import net.graphmasters.multiplatform.navigation.NavigationSdk.Config.ApiTokenAuthProvider
 import net.graphmasters.multiplatform.navigation.model.Routable
 import net.graphmasters.multiplatform.navigation.model.Route
 import net.graphmasters.multiplatform.navigation.routing.events.NavigationEventHandler.*
@@ -44,7 +42,6 @@ import net.graphmasters.multiplatform.navigation.routing.state.NavigationStatePr
 import net.graphmasters.multiplatform.navigation.vehicle.CarConfig
 import net.graphmasters.multiplatform.navigation.vehicle.TruckConfig
 import net.graphmasters.multiplatform.navigation.vehicle.VehicleConfig
-import net.graphmasters.routing.routing.example.concurrency.MainThreadExecutor
 import net.graphmasters.routing.routing.example.utils.EntityConverter
 import net.graphmasters.routing.routing.example.utils.SystemUtils
 
@@ -95,7 +92,6 @@ class MainActivity : AppCompatActivity(), LocationListener,
             )
         }
 
-
     private lateinit var routeSource: GeoJsonSource
 
     private lateinit var navigationSdk: NavigationSdk
@@ -119,12 +115,12 @@ class MainActivity : AppCompatActivity(), LocationListener,
         Mapbox.getInstance(this, BuildConfig.MAPBOX_TOKEN);
         setContentView(R.layout.activity_main)
 
-        this.initMapbox(savedInstanceState)
-        this.initializeNavigationSDK()
-
         this.vehicleConfigButton.setOnClickListener {
             this.showVehicleConfigSelection()
         }
+
+        this.initMapbox(savedInstanceState)
+        this.initNavigationSDK()
     }
 
     private fun showVehicleConfigSelection() {
@@ -214,21 +210,10 @@ class MainActivity : AppCompatActivity(), LocationListener,
         }
     }
 
-    private fun initializeNavigationSDK() {
+    private fun initNavigationSDK() {
         this.navigationSdk = NavigationSdk(
-            config = NavigationSdk.Config(
-//                Access possible via basic auth or api-token
-//                authProvider = BasicAuthProvider(
-//                    username = BuildConfig.NUNAV_USERNAME,
-//                    password = BuildConfig.NUNAV_PASSWORD,
-//                ),
-                authProvider = ApiTokenAuthProvider(
-                    apiToken = BuildConfig.NUNAV_API_TOKEN
-                ),
-                serviceUrl = BuildConfig.NUNAV_SERVICE_URL,
-                instanceId = "android-navigation-example"
-            ),
-            mainExecutor = MainThreadExecutor(Handler())
+            context = this,
+            apiKey = BuildConfig.NUNAV_API_KEY
         )
 
         // The currently used vehicle config can be set at any time before or during the routing, altering the route request and returning an appropriate route
@@ -298,7 +283,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
         try {
             this.navigationSdk.navigationEngine.startNavigation(
                 Routable.fromLatLng(
-                    net.graphmasters.multiplatform.core.model.LatLng(
+                    LatLng(
                         point.latitude,
                         point.longitude
                     )
@@ -415,7 +400,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
         Log.d(TAG, "onDestinationReached $routable")
     }
 
-    override fun onRouteUpdated(route: net.graphmasters.multiplatform.navigation.model.Route) {
+    override fun onRouteUpdated(route: Route) {
         Log.d(TAG, "onRouteUpdated $route")
     }
 
