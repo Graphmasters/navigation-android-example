@@ -27,7 +27,7 @@ Mapbox.getInstance(this, "your_mapbox_token");
 
 ## Usage
 Once started the app requests permission to access the device location. After receiving a valid location, the camera will pan to that location.
-Via long press on the map a routing destination is set and a routing session is started. Toasts will give detailed information about navigation events.
+Via long press on the map a destination is set and a navigation session is started. Toasts will give detailed information about navigation events.
 Back press will stop an active navigation.
 
 ## Contact
