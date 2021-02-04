@@ -6,18 +6,23 @@ To serve as a hands on example, this project will demonstrate the integration an
 
 ## Getting Started
 
-1. Update build config properites in the app's `build.gradle`
-
-* Replace API credentials depending on desired authentication method
+1. Set API-Token either in the app's `build.gradle` or directly in code
 ```
-buildConfigField "String", "NUNAV_USERNAME", "\"" + "your_username" + "\""
-buildConfigField "String", "NUNAV_PASSWORD", "\"" + "your_password" + "\""
 buildConfigField "String", "NUNAV_API_TOKEN", "\"" + "your_api_token" + "\""
 ```
+```
+this.navigationSdk = NavigationSdk(
+    context = this,
+    apiKey = "your_api_token"
+)
+```
 
-* For map rendering the Mapbox Android SDK is used. You can create a free account with them and create a test token.
+1. For map rendering the Mapbox Android SDK is used. You can create a free account with them and create a test token. Apply the token either in the app's `build.gradle` or directly in code
 ```
 buildConfigField "String", "MAPBOX_TOKEN", "\"" + "your_mapbox_token" + "\""
+```
+```
+Mapbox.getInstance(this, "your_mapbox_token");
 ```
 
 ## Usage
