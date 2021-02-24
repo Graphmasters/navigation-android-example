@@ -40,6 +40,7 @@ import net.graphmasters.multiplatform.navigation.routing.events.NavigationEventH
 import net.graphmasters.multiplatform.navigation.routing.progress.RouteProgressTracker
 import net.graphmasters.multiplatform.navigation.routing.state.NavigationStateProvider.*
 import net.graphmasters.multiplatform.navigation.vehicle.CarConfig
+import net.graphmasters.multiplatform.navigation.vehicle.MotorbikeConfig
 import net.graphmasters.multiplatform.navigation.vehicle.TruckConfig
 import net.graphmasters.multiplatform.navigation.vehicle.VehicleConfig
 import net.graphmasters.routing.routing.example.utils.EntityConverter
@@ -75,8 +76,11 @@ class MainActivity : AppCompatActivity(), LocationListener,
             trailerCount = 1
         )
 
-        // Default car config. Does not allow for specific vehicle properties
+        // Default car config. Does not allow for specific vehicle properties yet
         private val CAR_CONFIG = CarConfig()
+
+        // Default motorbike config. Does not allow for specific vehicle properties yet
+        private val MOTORBIKE_CONFIG = MotorbikeConfig()
     }
 
     private var vehicleConfig: VehicleConfig = CAR_CONFIG
@@ -87,6 +91,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
             this.vehicleConfigButton.setImageResource(
                 when (value) {
                     is TruckConfig -> R.drawable.ic_round_truck_24
+                    is MotorbikeConfig -> R.drawable.ic_round_bike_24
                     else -> R.drawable.ic_round_car_24
                 }
             )
@@ -126,8 +131,9 @@ class MainActivity : AppCompatActivity(), LocationListener,
     private fun showVehicleConfigSelection() {
         AlertDialog.Builder(this)
             .setSingleChoiceItems(
-                arrayOf("Car", "Truck"), when (this.vehicleConfig) {
+                arrayOf("Car", "Truck", "Motorbike"), when (this.vehicleConfig) {
                     is TruckConfig -> 1
+                    is MotorbikeConfig -> 2
                     else -> 0
                 }
             ) { dialog, which ->
@@ -135,6 +141,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
                     dialog.dismiss()
                     this.vehicleConfig = when (which) {
                         1 -> TRUCK_CONFIG
+                        2 -> MOTORBIKE_CONFIG
                         else -> CAR_CONFIG
                     }
                 }
