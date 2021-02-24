@@ -1,4 +1,4 @@
-package net.graphmasters.routing.routing.example
+package net.graphmasters.navigation.example
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -43,8 +43,8 @@ import net.graphmasters.multiplatform.navigation.vehicle.CarConfig
 import net.graphmasters.multiplatform.navigation.vehicle.MotorbikeConfig
 import net.graphmasters.multiplatform.navigation.vehicle.TruckConfig
 import net.graphmasters.multiplatform.navigation.vehicle.VehicleConfig
-import net.graphmasters.routing.routing.example.utils.EntityConverter
-import net.graphmasters.routing.routing.example.utils.SystemUtils
+import net.graphmasters.navigation.example.utils.EntityConverter
+import net.graphmasters.navigation.example.utils.SystemUtils
 
 
 class MainActivity : AppCompatActivity(), LocationListener,

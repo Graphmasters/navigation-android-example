@@ -1,4 +1,4 @@
-package net.graphmasters.routing.routing.example.utils
+package net.graphmasters.navigation.example.utils
 
 import android.annotation.SuppressLint
 import android.content.Context

@@ -1,4 +1,4 @@
-package net.graphmasters.routing.routing.example.utils
+package net.graphmasters.navigation.example.utils
 
 import android.location.Location as AndroidLocation
 import net.graphmasters.multiplatform.core.location.Location
