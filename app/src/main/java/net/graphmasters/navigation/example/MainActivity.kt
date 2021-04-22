@@ -9,6 +9,8 @@ import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
 import android.util.Log
+import android.view.View
+import android.view.WindowManager
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -31,6 +33,8 @@ import com.mapbox.mapboxsdk.style.layers.Property
 import com.mapbox.mapboxsdk.style.layers.PropertyFactory.*
 import com.mapbox.mapboxsdk.style.sources.GeoJsonSource
 import kotlinx.android.synthetic.main.activity_main.*
+import net.graphmasters.multiplatform.core.logging.GMLog
+import net.graphmasters.multiplatform.core.logging.Logger
 import net.graphmasters.multiplatform.core.model.LatLng
 import net.graphmasters.multiplatform.core.units.Duration
 import net.graphmasters.multiplatform.core.units.Length
@@ -99,8 +103,15 @@ class MainActivity : AppCompatActivity(), LocationListener,
             field = value
 
             when (value) {
-                CameraMode.FREE -> this.cameraSdk.navigationCameraHandler.stopCameraTracking()
-                CameraMode.FOLLOW -> this.cameraSdk.navigationCameraHandler.startCameraTracking()
+                CameraMode.FREE -> {
+                    this.cameraSdk.navigationCameraHandler.stopCameraTracking()
+                    this.mapboxMap?.setPadding(0, 0, 0, 0)
+                    this.navigationInfoCard?.visibility = View.GONE
+                }
+                CameraMode.FOLLOW -> {
+                    this.cameraSdk.navigationCameraHandler.startCameraTracking()
+                    this.navigationInfoCard?.visibility = View.VISIBLE
+                }
             }
         }
 
@@ -137,6 +148,9 @@ class MainActivity : AppCompatActivity(), LocationListener,
             ) == PackageManager.PERMISSION_GRANTED
         }
 
+    private val screenHeight: Int
+        get() = (this.getSystemService(WINDOW_SERVICE) as WindowManager).defaultDisplay.height
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -147,11 +161,18 @@ class MainActivity : AppCompatActivity(), LocationListener,
             this.showVehicleConfigSelection()
         }
 
+        this.positionButton.setOnClickListener {
+            if (this.navigationSdk.navigationStateProvider.navigationState.currentlyNavigating) {
+                this.cameraMode = CameraMode.FOLLOW
+            } else {
+                this.moveCameraCurrentPosition()
+            }
+        }
+
         this.initMapbox(savedInstanceState)
         this.initNavigationSDK()
         this.initCameraSdk()
     }
-
 
     private fun showVehicleConfigSelection() {
         AlertDialog.Builder(this)
@@ -266,13 +287,36 @@ class MainActivity : AppCompatActivity(), LocationListener,
         this.navigationSdk.navigationEventHandler.addOnDestinationReachedListener(this)
         this.navigationSdk.navigationEventHandler.addOnLeavingDestinationListener(this)
         this.navigationSdk.navigationEventHandler.addOnOffRouteListener(this)
+
+        GMLog.append(object : Logger {
+            override fun d(tag: String, msg: String) {
+                Log.d(tag, msg)
+            }
+
+            override fun e(tag: String, msg: String) {
+                Log.d(tag, msg)
+            }
+
+            override fun e(throwable: Throwable?) {
+                throwable?.printStackTrace()
+            }
+
+            override fun i(tag: String, msg: String) {
+            }
+
+            override fun v(tag: String, msg: String) {
+            }
+
+            override fun w(tag: String, msg: String) {
+            }
+
+        })
     }
 
     private fun initCameraSdk() {
-        this.cameraSdk = CameraSdk(navigationSdk = navigationSdk)
-        this.cameraSdk.navigationCameraHandler.setCameraUpdateListener(this)
+        this.cameraSdk = CameraSdk(navigationSdk = this.navigationSdk)
+        this.cameraSdk.navigationCameraHandler.addCameraUpdateListener(this)
     }
-
 
     @SuppressLint("MissingPermission")
     private fun enableMapboxLocationComponent(mapboxMap: MapboxMap, style: Style) {
@@ -297,7 +341,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
         style.addLayer(
             LineLayer(ROUTE_OUTLINE_LAYER_ID, ROUTE_SOURCE_ID).withProperties(
                 lineColor("#005f97"),
-                lineWidth(10f),
+                lineWidth(13f),
                 lineCap(Property.LINE_CAP_ROUND),
                 lineJoin(Property.LINE_JOIN_ROUND)
             )
@@ -307,7 +351,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
         style.addLayer(
             LineLayer(ROUTE_LINE_LAYER_ID, ROUTE_SOURCE_ID).withProperties(
                 lineColor("#4b8cc8"),
-                lineWidth(7f),
+                lineWidth(10f),
                 lineCap(Property.LINE_CAP_ROUND),
                 lineJoin(Property.LINE_JOIN_ROUND)
             )
@@ -336,8 +380,12 @@ class MainActivity : AppCompatActivity(), LocationListener,
 
     override fun onLocationChanged(location: Location?) {
         location?.let {
-            this.lastLocation = it
+            if (this.lastLocation == null) {
+                this.lastLocation = it
+                this.moveCameraCurrentPosition()
+            }
 
+            this.lastLocation = it
             if (!this.navigationSdk.navigationStateProvider.navigationState.initialized) {
                 this.mapboxMap?.locationComponent?.forceLocationUpdate(location)
             }
@@ -345,6 +393,29 @@ class MainActivity : AppCompatActivity(), LocationListener,
             // Publish the current location to the SDK
             this.navigationSdk.updateLocation(
                 location = EntityConverter.convert(location)
+            )
+        }
+
+        Log.d(
+            "DEBUG",
+            "speed ${this.navigationSdk.speedTracker.speed}"
+        )
+    }
+
+    private fun moveCameraCurrentPosition() {
+        this.lastLocation?.let {
+            this.mapboxMap?.animateCamera(
+                CameraUpdateFactory.newCameraPosition(
+                    CameraPosition.Builder()
+                        .zoom(15.0)
+                        .target(
+                            com.mapbox.mapboxsdk.geometry.LatLng(
+                                it.latitude,
+                                it.longitude
+                            )
+                        ).build()
+                ),
+                2000
             )
         }
     }
@@ -408,8 +479,6 @@ class MainActivity : AppCompatActivity(), LocationListener,
     override fun onNavigationStarted(routable: Routable) {
         Toast.makeText(this, "onNavigationStarted", Toast.LENGTH_SHORT).show()
         Log.d(TAG, "onNavigationStarted $routable")
-
-        this.cameraMode = CameraMode.FOLLOW
     }
 
     override fun onNavigationStopped() {
@@ -417,6 +486,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
         Log.d(TAG, "onNavigationStopped")
 
         this.cameraMode = CameraMode.FREE
+        this.navigationInfoCard.visibility = View.GONE
     }
 
     override fun onDestinationReached(routable: Routable) {
@@ -443,6 +513,9 @@ class MainActivity : AppCompatActivity(), LocationListener,
     override fun onNavigationStateInitialized(navigationState: NavigationState) {
         Toast.makeText(this, "onNavigationStateInitialized", Toast.LENGTH_SHORT).show()
         Log.d(TAG, "onNavigationStateInitialized $navigationState")
+
+        this.cameraMode = CameraMode.FOLLOW
+        this.navigationInfoCard.visibility = View.VISIBLE
     }
 
     override fun onNavigationStateUpdated(navigationState: NavigationState) {
@@ -509,14 +582,21 @@ class MainActivity : AppCompatActivity(), LocationListener,
 
         builder.target(
             com.mapbox.mapboxsdk.geometry.LatLng(
-                cameraUpdate.position.latitude,
-                cameraUpdate.position.longitude
+                cameraUpdate.latLng.latitude,
+                cameraUpdate.latLng.longitude
             )
+        )
+
+        this.mapboxMap?.setPadding(
+            0,
+            0,
+            0,
+            (cameraUpdate.padding.bottom * this.screenHeight * -1).toInt()
         )
 
         this.mapboxMap?.animateCamera(
             CameraUpdateFactory.newCameraPosition(builder.build()),
-            cameraUpdate.duration.milliseconds().toInt()
+            cameraUpdate.duration.milliseconds().toInt() * 2
         )
     }
 

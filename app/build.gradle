@@ -57,7 +57,7 @@ dependencies {
     implementation('net.graphmasters.multiplatform:multiplatform-navigation-aar:1.7.0-enhancement-255-navigation-sdk-interface') {
         changing true
     }
-    implementation(group: 'net.graphmasters.multiplatform', name: 'multiplatform-ui-aar', version: '1.0.0-enhancement-1-camera-sdk', ext: 'aar') {
+    implementation(group: 'net.graphmasters.multiplatform', name: 'multiplatform-ui-aar', version: '1.1.0-enhancement-1-camera-sdk', ext: 'aar') {
         changing true
     }
 
