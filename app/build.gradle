@@ -54,7 +54,12 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
 
     implementation 'com.mapbox.mapboxsdk:mapbox-android-sdk:8.3.0'
-    implementation 'net.graphmasters.multiplatform:multiplatform-navigation-aar:1.4.5'
+    implementation('net.graphmasters.multiplatform:multiplatform-navigation-aar:1.7.0-enhancement-255-navigation-sdk-interface') {
+        changing true
+    }
+    implementation(group: 'net.graphmasters.multiplatform', name: 'multiplatform-ui-aar', version: '1.0.0-enhancement-1-camera-sdk', ext: 'aar') {
+        changing true
+    }
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 
