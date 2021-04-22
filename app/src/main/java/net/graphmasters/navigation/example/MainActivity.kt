@@ -287,30 +287,6 @@ class MainActivity : AppCompatActivity(), LocationListener,
         this.navigationSdk.navigationEventHandler.addOnDestinationReachedListener(this)
         this.navigationSdk.navigationEventHandler.addOnLeavingDestinationListener(this)
         this.navigationSdk.navigationEventHandler.addOnOffRouteListener(this)
-
-        GMLog.append(object : Logger {
-            override fun d(tag: String, msg: String) {
-                Log.d(tag, msg)
-            }
-
-            override fun e(tag: String, msg: String) {
-                Log.d(tag, msg)
-            }
-
-            override fun e(throwable: Throwable?) {
-                throwable?.printStackTrace()
-            }
-
-            override fun i(tag: String, msg: String) {
-            }
-
-            override fun v(tag: String, msg: String) {
-            }
-
-            override fun w(tag: String, msg: String) {
-            }
-
-        })
     }
 
     private fun initCameraSdk() {
@@ -357,7 +333,6 @@ class MainActivity : AppCompatActivity(), LocationListener,
             )
         )
     }
-
 
     override fun onMapLongClick(point: com.mapbox.mapboxsdk.geometry.LatLng): Boolean {
         SystemUtils.vibrate(this, Duration.fromMilliseconds(200))
