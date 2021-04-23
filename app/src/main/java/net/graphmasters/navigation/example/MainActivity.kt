@@ -63,7 +63,8 @@ class MainActivity : AppCompatActivity(), LocationListener,
     OnRouteUpdateListener,
     OnRouteRequestFailedListener,
     OnNavigationStateInitializedListener, OnLeavingDestinationListener, OnOffRouteListener,
-    NavigationCameraHandler.CameraUpdateListener, MapboxMap.OnMoveListener {
+    NavigationCameraHandler.CameraUpdateListener, MapboxMap.OnMoveListener,
+    MapboxMap.OnMapClickListener {
 
     companion object {
         const val TAG = "MainActivity"
@@ -208,6 +209,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
                 this.mapboxMap = mapboxMap
                 mapboxMap.addOnMapLongClickListener(this)
                 mapboxMap.addOnMoveListener(this)
+                mapboxMap.addOnMapClickListener(this)
 
                 this.initRouteLayer(it)
                 this.enableLocation()
@@ -572,5 +574,10 @@ class MainActivity : AppCompatActivity(), LocationListener,
     }
 
     override fun onMoveEnd(detector: MoveGestureDetector) {
+    }
+
+    override fun onMapClick(point: com.mapbox.mapboxsdk.geometry.LatLng): Boolean {
+        this.cameraMode = CameraMode.FREE
+        return false
     }
 }
