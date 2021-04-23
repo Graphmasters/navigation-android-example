@@ -105,10 +105,12 @@ class MainActivity : AppCompatActivity(), LocationListener,
                     this.cameraSdk.navigationCameraHandler.stopCameraTracking()
                     this.mapboxMap?.setPadding(0, 0, 0, 0)
                     this.navigationInfoCard?.visibility = View.GONE
+                    this.positionButton?.visibility = View.VISIBLE
                 }
                 CameraMode.FOLLOW -> {
                     this.cameraSdk.navigationCameraHandler.startCameraTracking()
                     this.navigationInfoCard?.visibility = View.VISIBLE
+                    this.positionButton?.visibility = View.GONE
                 }
             }
         }
@@ -507,13 +509,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
         this.cameraSdk.navigationCameraHandler.addCameraUpdateListener(this)
     }
 
-    override fun onCameraUpdateReady(cameraUpdate: CameraUpdate?) {
-        cameraUpdate?.let {
-            this.updateCamera(it)
-        }
-    }
-
-    private fun updateCamera(cameraUpdate: CameraUpdate) {
+    override fun onCameraUpdateReady(cameraUpdate: CameraUpdate) {
         // Convert the CameraUpdate provided by the SDK into the desired format - in this case Mapbox
         val builder = CameraPosition.Builder()
         cameraUpdate.bearing?.let {
@@ -545,7 +541,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
         // Pass the update to Mapbox
         this.mapboxMap?.animateCamera(
             CameraUpdateFactory.newCameraPosition(builder.build()),
-            cameraUpdate.duration.milliseconds().toInt()
+            cameraUpdate.duration.milliseconds().toInt() * 2
         )
     }
 

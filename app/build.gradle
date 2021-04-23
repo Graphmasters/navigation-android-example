@@ -53,14 +53,11 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.1.2'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
 
-    implementation 'com.mapbox.mapboxsdk:mapbox-android-sdk:8.3.0'
-
-
-    implementation 'net.graphmasters.multiplatform:multiplatform-navigation-aar:1.7.0'
-    implementation(group: 'net.graphmasters.multiplatform', name: 'multiplatform-ui-aar', version: '1.1.0-enhancement-3-remove-initial-camera-update', ext: 'aar')
+    implementation(group: 'net.graphmasters.multiplatform', name: 'multiplatform-navigation-aar', version: '1.7.0')
+    implementation(group: 'net.graphmasters.multiplatform', name: 'multiplatform-ui-aar', version: '1.1.0', ext: 'aar')
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-
+    implementation 'com.mapbox.mapboxsdk:mapbox-android-sdk:8.3.0'
     implementation 'com.squareup.okhttp3:okhttp:4.4.0'
     implementation 'com.squareup.retrofit2:retrofit:2.6.1'
     implementation 'com.squareup.retrofit2:converter-gson:2.6.1'
