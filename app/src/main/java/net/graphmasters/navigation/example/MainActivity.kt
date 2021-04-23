@@ -33,8 +33,6 @@ import com.mapbox.mapboxsdk.style.layers.Property
 import com.mapbox.mapboxsdk.style.layers.PropertyFactory.*
 import com.mapbox.mapboxsdk.style.sources.GeoJsonSource
 import kotlinx.android.synthetic.main.activity_main.*
-import net.graphmasters.multiplatform.core.logging.GMLog
-import net.graphmasters.multiplatform.core.logging.Logger
 import net.graphmasters.multiplatform.core.model.LatLng
 import net.graphmasters.multiplatform.core.units.Duration
 import net.graphmasters.multiplatform.core.units.Length
@@ -245,25 +243,6 @@ class MainActivity : AppCompatActivity(), LocationListener,
         )
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-
-        when (requestCode) {
-            LOCATION_PERMISSION_REQUEST_CODE -> {
-                val permissionGranted =
-                    grantResults.getOrElse(0) { PackageManager.PERMISSION_DENIED } == PackageManager.PERMISSION_GRANTED
-
-                if (permissionGranted) {
-                    this.enableLocation()
-                }
-            }
-        }
-    }
-
     private fun initNavigationSDK() {
         this.navigationSdk = AndroidNavigationSdk(
             context = this,
@@ -287,11 +266,6 @@ class MainActivity : AppCompatActivity(), LocationListener,
         this.navigationSdk.navigationEventHandler.addOnDestinationReachedListener(this)
         this.navigationSdk.navigationEventHandler.addOnLeavingDestinationListener(this)
         this.navigationSdk.navigationEventHandler.addOnOffRouteListener(this)
-    }
-
-    private fun initCameraSdk() {
-        this.cameraSdk = CameraSdk(navigationSdk = this.navigationSdk)
-        this.cameraSdk.navigationCameraHandler.addCameraUpdateListener(this)
     }
 
     @SuppressLint("MissingPermission")
@@ -331,49 +305,6 @@ class MainActivity : AppCompatActivity(), LocationListener,
                 lineCap(Property.LINE_CAP_ROUND),
                 lineJoin(Property.LINE_JOIN_ROUND)
             )
-        )
-    }
-
-    override fun onMapLongClick(point: com.mapbox.mapboxsdk.geometry.LatLng): Boolean {
-        SystemUtils.vibrate(this, Duration.fromMilliseconds(200))
-
-        try {
-            this.navigationSdk.navigationEngine.startNavigation(
-                RoutableFactory.fromLatLng(
-                    LatLng(
-                        point.latitude,
-                        point.longitude
-                    )
-                )
-            )
-        } catch (e: Exception) {
-            Toast.makeText(this, e.message, Toast.LENGTH_LONG).show()
-        }
-
-        return true
-    }
-
-    override fun onLocationChanged(location: Location?) {
-        location?.let {
-            if (this.lastLocation == null) {
-                this.lastLocation = it
-                this.moveCameraCurrentPosition()
-            }
-
-            this.lastLocation = it
-            if (!this.navigationSdk.navigationStateProvider.navigationState.initialized) {
-                this.mapboxMap?.locationComponent?.forceLocationUpdate(location)
-            }
-
-            // Publish the current location to the SDK
-            this.navigationSdk.updateLocation(
-                location = EntityConverter.convert(location)
-            )
-        }
-
-        Log.d(
-            "DEBUG",
-            "speed ${this.navigationSdk.speedTracker.speed}"
         )
     }
 
@@ -436,6 +367,44 @@ class MainActivity : AppCompatActivity(), LocationListener,
             this.drawRoute(emptyList())
         } else {
             super.onBackPressed()
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+
+        when (requestCode) {
+            LOCATION_PERMISSION_REQUEST_CODE -> {
+                val permissionGranted =
+                    grantResults.getOrElse(0) { PackageManager.PERMISSION_DENIED } == PackageManager.PERMISSION_GRANTED
+
+                if (permissionGranted) {
+                    this.enableLocation()
+                }
+            }
+        }
+    }
+
+    override fun onLocationChanged(location: Location?) {
+        location?.let {
+            if (this.lastLocation == null) {
+                this.lastLocation = it
+                this.moveCameraCurrentPosition()
+            }
+
+            this.lastLocation = it
+            if (!this.navigationSdk.navigationStateProvider.navigationState.initialized) {
+                this.mapboxMap?.locationComponent?.forceLocationUpdate(location)
+            }
+
+            // Publish the current location to the SDK
+            this.navigationSdk.updateLocation(
+                location = EntityConverter.convert(location)
+            )
         }
     }
 
@@ -531,19 +500,21 @@ class MainActivity : AppCompatActivity(), LocationListener,
         this.routeSource.setGeoJson(feature)
     }
 
+    private fun initCameraSdk() {
+        this.cameraSdk = CameraSdk(navigationSdk = this.navigationSdk)
+
+        // Attach listener and you will be notified about new camera updates
+        this.cameraSdk.navigationCameraHandler.addCameraUpdateListener(this)
+    }
+
     override fun onCameraUpdateReady(cameraUpdate: CameraUpdate?) {
         cameraUpdate?.let {
             this.updateCamera(it)
         }
     }
 
-    override fun onInitialCameraUpdateReady(cameraUpdate: CameraUpdate?) {
-        cameraUpdate?.let {
-            this.updateCamera(it)
-        }
-    }
-
     private fun updateCamera(cameraUpdate: CameraUpdate) {
+        // Convert the CameraUpdate provided by the SDK into the desired format - in this case Mapbox
         val builder = CameraPosition.Builder()
         cameraUpdate.bearing?.let {
             builder.bearing(it.toDouble())
@@ -562,6 +533,8 @@ class MainActivity : AppCompatActivity(), LocationListener,
             )
         )
 
+        // The padding is represented as four float values ranging from 0..1 .
+        // 0 would represent a padding of 0, while 1 would represent the max height or max width of the device's screen
         this.mapboxMap?.setPadding(
             0,
             0,
@@ -569,10 +542,30 @@ class MainActivity : AppCompatActivity(), LocationListener,
             (cameraUpdate.padding.bottom * this.screenHeight * -1).toInt()
         )
 
+        // Pass the update to Mapbox
         this.mapboxMap?.animateCamera(
             CameraUpdateFactory.newCameraPosition(builder.build()),
-            cameraUpdate.duration.milliseconds().toInt() * 2
+            cameraUpdate.duration.milliseconds().toInt()
         )
+    }
+
+    override fun onMapLongClick(point: com.mapbox.mapboxsdk.geometry.LatLng): Boolean {
+        SystemUtils.vibrate(this, Duration.fromMilliseconds(200))
+
+        try {
+            this.navigationSdk.navigationEngine.startNavigation(
+                RoutableFactory.fromLatLng(
+                    LatLng(
+                        point.latitude,
+                        point.longitude
+                    )
+                )
+            )
+        } catch (e: Exception) {
+            Toast.makeText(this, e.message, Toast.LENGTH_LONG).show()
+        }
+
+        return true
     }
 
     override fun onMoveBegin(detector: MoveGestureDetector) {
