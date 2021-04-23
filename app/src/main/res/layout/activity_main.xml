@@ -17,74 +17,6 @@
 
     </com.mapbox.mapboxsdk.maps.MapView>
 
-    <TextView
-        android:id="@+id/nextMilestoneDistance"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:layout_marginBottom="32dp"
-        android:shadowColor="@color/black"
-        android:shadowDx="1"
-        android:shadowDy="1"
-        android:shadowRadius="1"
-        android:textColor="@color/white"
-        android:textSize="22dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
-
-    <TextView
-        android:id="@+id/remainingTravelTime"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:layout_marginBottom="32dp"
-        android:shadowColor="@color/black"
-        android:shadowDx="1"
-        android:shadowDy="1"
-        android:shadowRadius="1"
-        android:textColor="@color/white"
-        android:textSize="22dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/nextMilestoneDistance"
-        app:layout_constraintStart_toStartOf="parent" />
-
-    <TextView
-        android:id="@+id/distanceDestination"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:layout_marginBottom="32dp"
-        android:shadowColor="@color/black"
-        android:shadowDx="1"
-        android:shadowDy="1"
-        android:shadowRadius="1"
-        android:textColor="@color/white"
-        android:textSize="22dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/nextMilestoneDistance" />
-
-    <TextView
-        android:id="@+id/nextMilestone"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginEnd="16dp"
-        android:layout_marginBottom="16dp"
-        android:shadowColor="@color/black"
-        android:shadowDx="1"
-        android:shadowDy="1"
-        android:shadowRadius="1"
-        android:textColor="@color/white"
-        android:textSize="22dp"
-        app:layout_constraintBottom_toTopOf="@+id/nextMilestoneDistance"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
-
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/vehicleConfigButton"
         android:layout_width="wrap_content"
@@ -95,5 +27,111 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:srcCompat="@drawable/ic_round_car_24" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/positionButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginBottom="16dp"
+        android:clickable="true"
+        app:layout_constraintBottom_toTopOf="@+id/navigationInfoCard"
+        app:layout_constraintStart_toStartOf="parent"
+        app:srcCompat="@drawable/ic_round_near_me_24" />
+
+    <androidx.cardview.widget.CardView
+        android:id="@+id/navigationInfoCard"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="16dp"
+        android:visibility="gone"
+        app:cardCornerRadius="8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <TextView
+                android:id="@+id/nextMilestoneDistance"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginEnd="8dp"
+                android:layout_marginBottom="16dp"
+                android:shadowColor="@color/black"
+                android:shadowDx="1"
+                android:shadowDy="1"
+                android:shadowRadius="1"
+                android:textSize="22dp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toStartOf="@+id/guideline2"
+                app:layout_constraintStart_toStartOf="parent" />
+
+            <TextView
+                android:id="@+id/nextMilestone"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginEnd="8dp"
+                android:layout_marginBottom="8dp"
+                android:shadowColor="@color/black"
+                android:shadowDx="1"
+                android:shadowDy="1"
+                android:shadowRadius="1"
+                android:textSize="22dp"
+                app:layout_constraintBottom_toTopOf="@+id/nextMilestoneDistance"
+                app:layout_constraintEnd_toStartOf="@+id/guideline2"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <TextView
+                android:id="@+id/remainingTravelTime"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginEnd="16dp"
+                android:layout_marginBottom="8dp"
+                android:shadowColor="@color/black"
+                android:shadowDx="1"
+                android:shadowDy="1"
+                android:shadowRadius="1"
+                android:textSize="22dp"
+                app:layout_constraintBottom_toTopOf="@+id/distanceDestination"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="@+id/guideline2"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <TextView
+                android:id="@+id/distanceDestination"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginEnd="16dp"
+                android:layout_marginBottom="16dp"
+                android:shadowColor="@color/black"
+                android:shadowDx="1"
+                android:shadowDy="1"
+                android:shadowRadius="1"
+                android:textSize="22dp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="@+id/guideline2" />
+
+            <androidx.constraintlayout.widget.Guideline
+                android:id="@+id/guideline2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                app:layout_constraintGuide_percent="0.5" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.cardview.widget.CardView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
