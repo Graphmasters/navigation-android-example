@@ -393,7 +393,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
         }
     }
 
-    override fun onLocationChanged(location: Location?) {
+    override fun onLocationChanged(location: Location) {
         location?.let {
             if (this.lastLocation == null) {
                 this.lastLocation = it
@@ -416,11 +416,11 @@ class MainActivity : AppCompatActivity(), LocationListener,
         Log.d(TAG, "onStatusChanged $provider")
     }
 
-    override fun onProviderEnabled(provider: String?) {
+    override fun onProviderEnabled(provider: String) {
         Log.d(TAG, "onProviderEnabled $provider")
     }
 
-    override fun onProviderDisabled(provider: String?) {
+    override fun onProviderDisabled(provider: String) {
         Log.d(TAG, "onProviderDisabled $provider")
     }
 
