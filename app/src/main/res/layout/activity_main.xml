@@ -7,15 +7,14 @@
     tools:context=".MainActivity">
 
 
-    <com.mapbox.mapboxsdk.maps.MapView
+    <com.mapbox.maps.MapView
         android:id="@+id/mapView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         app:mapbox_cameraTargetLat="51.229235"
         app:mapbox_cameraTargetLng="6.783273"
         app:mapbox_cameraZoom="11">
-
-    </com.mapbox.mapboxsdk.maps.MapView>
+    </com.mapbox.maps.MapView>
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/vehicleConfigButton"
