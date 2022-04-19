@@ -34,6 +34,8 @@ import com.mapbox.maps.plugin.animation.MapAnimationOptions
 import com.mapbox.maps.plugin.animation.flyTo
 import com.mapbox.maps.plugin.gestures.*
 import com.mapbox.maps.plugin.locationcomponent.LocationComponentPlugin
+import com.mapbox.maps.plugin.locationcomponent.LocationConsumer
+import com.mapbox.maps.plugin.locationcomponent.LocationProvider
 import com.mapbox.maps.plugin.locationcomponent.location
 import kotlinx.android.synthetic.main.activity_main.*
 import net.graphmasters.multiplatform.core.model.LatLng
@@ -154,8 +156,6 @@ class MainActivity : AppCompatActivity(), LocationListener,
 
     private var mapboxMap: MapboxMap? = null
 
-    private var mapView: MapView? = null
-
     private var lastLocation: Location? = null
 
     private val locationPermissionGranted: Boolean
@@ -175,7 +175,6 @@ class MainActivity : AppCompatActivity(), LocationListener,
             tileStoreUsageMode(TileStoreUsageMode.READ_ONLY)
         }
 
-        this.mapView = findViewById(R.id.mapView)
         setContentView(R.layout.activity_main)
 
         this.vehicleConfigButton.setOnClickListener {
@@ -186,7 +185,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
             if (this.navigationSdk.navigationStateProvider.navigationState.currentlyNavigating) {
                 this.cameraMode = CameraMode.FOLLOW
             } else {
-                this.moveCameraCurrentPosition()
+                this.lastLocation?.let { this.moveCameraCurrentPosition(it) }
             }
         }
 
@@ -222,16 +221,15 @@ class MainActivity : AppCompatActivity(), LocationListener,
     }
 
     private fun initMapbox() {
-        this.mapView?.let {
+        mapView?.let {
             this.mapboxMap = it.getMapboxMap()
-
             it.getMapboxMap().loadStyleUri(
                 Style.MAPBOX_STREETS,
                 onStyleLoaded = { style ->
                     Log.d(TAG, "Map ready")
-                    mapboxMap!!.addOnMapLongClickListener(this)
-                    mapboxMap!!.addOnMoveListener(this)
-                    mapboxMap!!.addOnMapClickListener(this)
+                    it.getMapboxMap().addOnMapLongClickListener(this)
+                    it.getMapboxMap().addOnMoveListener(this)
+                    it.getMapboxMap().addOnMapClickListener(this)
                     this.initRouteLayer(style)
                     this.enableLocation()
                     this.enableMapboxLocationComponent(it.location, this)
@@ -269,7 +267,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
     private fun initNavigationSDK() {
         this.navigationSdk = AndroidNavigationSdk(
             context = this,
-            apiKey =  net.graphmasters.navigation.example.BuildConfig.NUNAV_API_KEY
+            apiKey = BuildConfig.NUNAV_API_KEY
         )
 
         // The currently used vehicle config can be set at any time before or during the routing, altering the route request and returning an appropriate route
@@ -291,11 +289,21 @@ class MainActivity : AppCompatActivity(), LocationListener,
         this.navigationSdk.navigationEventHandler.addOnOffRouteListener(this)
     }
 
-    private fun enableMapboxLocationComponent(location: LocationComponentPlugin , context: Context) {
+    private var mapboxLocationConsumer: LocationConsumer? = null
+
+    private fun enableMapboxLocationComponent(location: LocationComponentPlugin, context: Context) {
         location.apply {
-            this.locationPuck = navigationPuck2D(context)
-            this.enabled = true
-            this.pulsingEnabled = true
+            locationPuck = navigationPuck2D(context)
+            enabled = true
+            setLocationProvider(object : LocationProvider {
+                override fun registerLocationConsumer(locationConsumer: LocationConsumer) {
+                    mapboxLocationConsumer = locationConsumer
+                }
+
+                override fun unRegisterLocationConsumer(locationConsumer: LocationConsumer) {
+                    mapboxLocationConsumer = null
+                }
+            })
         }
     }
 
@@ -328,20 +336,19 @@ class MainActivity : AppCompatActivity(), LocationListener,
         )
     }
 
-    private fun moveCameraCurrentPosition() {
-        this.lastLocation?.let {
-            val cameraOption = CameraOptions.Builder()
-                .zoom(15.0)
-                .center(Point.fromLngLat(it.longitude, it.latitude))
-                .build()
+    @SuppressLint("MissingPermission")
+    private fun moveCameraCurrentPosition(location: Location) {
+        val cameraOption = CameraOptions.Builder()
+            .zoom(15.0)
+            .center(Point.fromLngLat(location.longitude, location.latitude))
+            .build()
 
-            this.mapboxMap?.flyTo(
-                cameraOption,
-                MapAnimationOptions.mapAnimationOptions {
-                    this.duration(2000)
-                }
-            )
-        }
+        this.mapboxMap?.flyTo(
+            cameraOption,
+            MapAnimationOptions.mapAnimationOptions {
+                this.duration(2000)
+            }
+        )
     }
 
     override fun onBackPressed() {
@@ -375,20 +382,32 @@ class MainActivity : AppCompatActivity(), LocationListener,
     override fun onLocationChanged(location: Location) {
         if (this.lastLocation == null) {
             this.lastLocation = location
-            this.moveCameraCurrentPosition()
+            this.moveCameraCurrentPosition(location)
         }
 
-//        this.lastLocation = location
-//        if (!this.navigationSdk.navigationStateProvider.navigationState.initialized) {
-//            this.mapView?.location.getLocationProvider().
-//
-//            //locationComponent?.forceLocationUpdate(location)
-//        }
+        this.lastLocation = location
+        if (!this.navigationSdk.navigationStateProvider.navigationState.initialized) {
+            this.updateLocationPuck(location)
+        }
 
         // Publish the current location to the SDK
         this.navigationSdk.updateLocation(
             location = EntityConverter.convert(location)
         )
+    }
+
+    private fun updateLocationPuck(location: Location) {
+        runOnUiThread {
+            this.mapboxLocationConsumer?.let {
+                it.onLocationUpdated(
+                    Point.fromLngLat(
+                        location.longitude,
+                        location.latitude
+                    )
+                )
+                it.onBearingUpdated(location.bearing.toDouble())
+            }
+        }
     }
 
     override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {
@@ -452,14 +471,10 @@ class MainActivity : AppCompatActivity(), LocationListener,
         navigationState.routeProgress?.let { routeProgress ->
             this.updateNavigationInfoViews(routeProgress)
 
-//            // Updating the Mapbox position icon with the location on the route instead of the raw one received from the GPS
-//            routeProgress.currentLocationOnRoute?.let
-//                this.mapboxMap?.locationComponent?.forceLocationUpdate(
-//                    EntityConverter.convert(
-//                        it
-//                    )
-//                )
-//            }
+            // Updating the Mapbox position icon with the location on the route instead of the raw one received from the GPS
+            routeProgress.currentLocationOnRoute?.let {
+                this.updateLocationPuck(EntityConverter.convert(it))
+            }
 
             // Draw the current route on the map
             this.drawRoute(routeProgress.route.waypoints.map { it.latLng })
@@ -560,7 +575,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
 
     override fun onMove(detector: MoveGestureDetector): Boolean {
         this.cameraMode = CameraMode.FREE
-        return true
+        return false
     }
 
     override fun onMoveEnd(detector: MoveGestureDetector) {
