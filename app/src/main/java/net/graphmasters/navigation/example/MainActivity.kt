@@ -552,7 +552,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
 
         try {
             this.navigationSdk.navigationEngine.startNavigation(
-                RoutableFactory.fromLatLng(
+                RoutableFactory.create(
                     LatLng(
                         point.latitude,
                         point.longitude
