@@ -48,9 +48,9 @@ import net.graphmasters.multiplatform.navigation.vehicle.CarConfig
 import net.graphmasters.multiplatform.navigation.vehicle.MotorbikeConfig
 import net.graphmasters.multiplatform.navigation.vehicle.TruckConfig
 import net.graphmasters.multiplatform.navigation.vehicle.VehicleConfig
-import net.graphmasters.multiplatform.ui.camera.CameraSdk
-import net.graphmasters.multiplatform.ui.camera.CameraUpdate
-import net.graphmasters.multiplatform.ui.camera.NavigationCameraHandler
+import net.graphmasters.multiplatform.navigation.ui.camera.CameraSdk
+import net.graphmasters.multiplatform.navigation.ui.camera.CameraUpdate
+import net.graphmasters.multiplatform.navigation.ui.camera.NavigationCameraHandler
 import net.graphmasters.navigation.example.utils.EntityConverter
 import net.graphmasters.navigation.example.utils.SystemUtils
 
@@ -505,7 +505,9 @@ class MainActivity : AppCompatActivity(), LocationListener,
     }
 
     private fun initCameraSdk() {
-        this.cameraSdk = CameraSdk(navigationSdk = this.navigationSdk)
+        this.cameraSdk = CameraSdk(
+            context = this,
+            navigationSdk = this.navigationSdk)
 
         // Attach listener and you will be notified about new camera updates
         this.cameraSdk.navigationCameraHandler.addCameraUpdateListener(this)
@@ -543,7 +545,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
         // Pass the update to Mapbox
         this.mapboxMap?.animateCamera(
             CameraUpdateFactory.newCameraPosition(builder.build()),
-            cameraUpdate.duration.milliseconds().toInt() * 2
+            (cameraUpdate.duration?.milliseconds()?.toInt() ?: 0) * 2
         )
     }
 
