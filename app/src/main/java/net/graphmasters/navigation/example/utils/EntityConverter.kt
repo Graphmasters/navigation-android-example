@@ -13,10 +13,10 @@ object EntityConverter {
             provider = location.provider,
             timestamp = location.time,
             latLng = LatLng(location.latitude, location.longitude),
-            altitude = if (location.hasAltitude()) Length.fromMeters(location.altitude) else Length.UNDEFINED,
+            altitude = if (location.hasAltitude()) Length.fromMeters(location.altitude) else Length.ZERO,
             heading = if (location.hasBearing()) location.bearing.toDouble() else null,
-            speed = if (location.hasSpeed()) Speed.fromMs(location.speed.toDouble()) else Speed.UNDEFINED,
-            accuracy = if (location.hasAccuracy()) Length.fromMeters(location.accuracy.toDouble()) else Length.UNDEFINED
+            speed = if (location.hasSpeed()) Speed.fromMs(location.speed.toDouble()) else Speed.ZERO,
+            accuracy = if (location.hasAccuracy()) Length.fromMeters(location.accuracy.toDouble()) else Length.ZERO
         )
     }
 
@@ -25,8 +25,8 @@ object EntityConverter {
         androidLocation.latitude = location.latLng.latitude
         androidLocation.longitude = location.latLng.longitude
         androidLocation.bearing = if (location.heading != null) location.heading!!.toFloat() else 0f
-        androidLocation.speed = location.speed.ms().toFloat()
-        androidLocation.accuracy = location.accuracy.meters().toFloat()
+        androidLocation.speed = location.speed?.ms()?.toFloat() ?: 0f
+        androidLocation.accuracy = location.accuracy?.meters()?.toFloat() ?: 0f
 
         return androidLocation
     }
