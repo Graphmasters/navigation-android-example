@@ -64,13 +64,9 @@ class MainActivity : AppCompatActivity(), LocationListener,
 
     companion object {
         const val TAG = "MainActivity"
-
         const val LOCATION_PERMISSION_REQUEST_CODE = 1
-
         const val ROUTE_OUTLINE_LAYER_ID = "route-outline-layer"
-
         const val ROUTE_LINE_LAYER_ID = "route-layer"
-
         const val ROUTE_SOURCE_ID = "route-source"
 
         // Predefined truck config. All the parameters are freely customizable
