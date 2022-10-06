@@ -161,7 +161,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
         }
 
         this.initMapbox(savedInstanceState)
-        this.initNavigationSDK()
+        this.initNavigationSdk()
         this.initCameraSdk()
     }
 
@@ -232,7 +232,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
         )
     }
 
-    private fun initNavigationSDK() {
+    private fun initNavigationSdk() {
         this.navigationSdk = AndroidNavigationSdk(
             context = this,
             apiKey = BuildConfig.NUNAV_API_KEY
