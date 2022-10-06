@@ -42,6 +42,7 @@ import net.graphmasters.multiplatform.navigation.model.RoutableFactory
 import net.graphmasters.multiplatform.navigation.model.Route
 import net.graphmasters.multiplatform.navigation.routing.events.NavigationEventHandler.*
 import net.graphmasters.multiplatform.navigation.routing.progress.RouteProgressTracker
+import net.graphmasters.multiplatform.navigation.routing.progress.RouteProgressTracker.RouteProgress
 import net.graphmasters.multiplatform.navigation.routing.state.NavigationStateProvider.*
 import net.graphmasters.multiplatform.navigation.ui.camera.CameraSdk
 import net.graphmasters.multiplatform.navigation.ui.camera.CameraUpdate
@@ -63,7 +64,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
     OnRouteRequestFailedListener,
     OnNavigationStateInitializedListener, OnLeavingDestinationListener, OnOffRouteListener,
     NavigationCameraHandler.CameraUpdateListener, MapboxMap.OnMoveListener,
-    MapboxMap.OnMapClickListener {
+    MapboxMap.OnMapClickListener, NavigationCameraHandler.CameraTrackingListener {
 
     companion object {
         const val TAG = "MainActivity"
@@ -108,7 +109,8 @@ class MainActivity : AppCompatActivity(), LocationListener,
                 }
                 CameraMode.FOLLOW -> {
                     this.cameraSdk.navigationCameraHandler.startCameraTracking()
-                    this.navigationInfoCard?.visibility = View.VISIBLE
+                    this.navigationInfoCard?.visibility =
+                        if (navigating) View.VISIBLE else View.GONE
                     this.positionButton?.visibility = View.GONE
                 }
             }
@@ -140,6 +142,9 @@ class MainActivity : AppCompatActivity(), LocationListener,
 
     private var lastLocation: Location? = null
 
+    private val navigating: Boolean
+        get() = this.navigationSdk.navigationStateProvider.navigationState.currentlyNavigating
+
     private val locationPermissionGranted: Boolean
         get() = ContextCompat.checkSelfPermission(
             this, Manifest.permission.ACCESS_FINE_LOCATION
@@ -156,11 +161,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
         }
 
         this.positionButton.setOnClickListener {
-            if (this.navigationSdk.navigationStateProvider.navigationState.currentlyNavigating) {
-                this.cameraMode = CameraMode.FOLLOW
-            } else {
-                this.moveCameraCurrentPosition()
-            }
+            this.cameraMode = CameraMode.FOLLOW
         }
 
         this.initMapbox(savedInstanceState)
@@ -382,6 +383,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
     }
 
     override fun onLocationChanged(location: Location) {
+        Log.d(TAG, "onLocationChanged $location")
         if (this.lastLocation == null) {
             this.lastLocation = location
             this.moveCameraCurrentPosition()
@@ -393,9 +395,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
         }
 
         // Publish the current location to the SDK
-        this.navigationSdk.updateLocation(
-            location = EntityConverter.convert(location)
-        )
+        this.navigationSdk.updateLocation(EntityConverter.convert(location))
     }
 
     override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {
@@ -462,21 +462,29 @@ class MainActivity : AppCompatActivity(), LocationListener,
         navigationState.routeProgress?.let { routeProgress ->
             this.updateNavigationInfoViews(routeProgress)
 
-            // Updating the Mapbox position icon with the location on the route instead of the raw one received from the GPS
-            routeProgress.currentLocationOnRoute.let {
-                this.mapboxMap?.locationComponent?.forceLocationUpdate(
-                    EntityConverter.convert(
-                        it
-                    )
-                )
-            }
+            // Updating the Mapbox position icon with the current location
+            this.updateMapLocation(routeProgress, navigationState.onRoute)
 
             // Draw the current route on the map
             this.drawRoute(routeProgress.route.waypoints.map { it.latLng })
         }
     }
 
-    private fun updateNavigationInfoViews(routeProgress: RouteProgressTracker.RouteProgress) {
+    private fun updateMapLocation(routeProgress: RouteProgress, onRoute: Boolean) {
+        // If the user is still on route, use the projected location of the route...
+        val location = if (onRoute) {
+            routeProgress.currentLocationOnRoute
+        } else {
+            //... otherwise use the original gps location
+            routeProgress.currentLocationOnRoute.originalLocation
+        }
+
+        EntityConverter.convert(location).let {
+            this.mapboxMap?.locationComponent?.forceLocationUpdate(it)
+        }
+    }
+
+    private fun updateNavigationInfoViews(routeProgress: RouteProgress) {
         this.nextMilestone.text = routeProgress.nextMilestone?.turnInfo?.turnCommand?.name
         this.nextMilestoneDistance.text =
             "${routeProgress.nextMilestoneDistance.meters().toInt()}m"
@@ -494,18 +502,24 @@ class MainActivity : AppCompatActivity(), LocationListener,
     }
 
     private fun initCameraSdk() {
-        this.cameraSdk = CameraSdk(this, this.navigationSdk, Duration.fromSeconds(2))
+        this.cameraSdk = CameraSdk(this, this.navigationSdk, Duration.fromSeconds(3))
 
         // Attach listener and you will be notified about new camera updates
         this.cameraSdk.navigationCameraHandler.addCameraUpdateListener(this)
+        this.cameraSdk.navigationCameraHandler.addCameraTrackingListener(this)
     }
 
     override fun onCameraUpdateReady(cameraUpdate: CameraUpdate) {
         // Convert the update to the mapbox model and pass to the map
-        this.mapboxMap?.animateCamera(
-            EntityConverter.convert(cameraUpdate),
-            cameraUpdate.duration?.milliseconds()?.toInt() ?: 1000
-        )
+        this.mapboxMap?.animateCamera(EntityConverter.convert(cameraUpdate), 4000)
+    }
+
+    override fun onCameraTrackingStarted() {
+        Log.d(TAG, "onCameraTrackingStarted")
+    }
+
+    override fun onCameraTrackingStopped() {
+        Log.d(TAG, "onCameraTrackingStopped")
     }
 
     override fun onMapLongClick(point: com.mapbox.mapboxsdk.geometry.LatLng): Boolean {
@@ -535,4 +549,6 @@ class MainActivity : AppCompatActivity(), LocationListener,
         this.cameraMode = CameraMode.FREE
         return false
     }
+
+
 }
