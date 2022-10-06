@@ -541,6 +541,4 @@ class MainActivity : AppCompatActivity(), LocationListener,
         this.cameraMode = CameraMode.FREE
         return false
     }
-
-
 }
