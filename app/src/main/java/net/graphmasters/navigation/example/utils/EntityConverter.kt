@@ -1,5 +1,8 @@
 package net.graphmasters.navigation.example.utils
 
+import com.mapbox.geojson.Feature
+import com.mapbox.geojson.LineString
+import com.mapbox.geojson.Point
 import com.mapbox.mapboxsdk.camera.CameraPosition
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory
 import android.location.Location as AndroidLocation
@@ -53,4 +56,9 @@ object EntityConverter {
 
         return CameraUpdateFactory.newCameraPosition(builder.build())
     }
+
+    fun convert(polyline: List<LatLng>): Feature =
+        Feature.fromGeometry(LineString.fromLngLats(polyline.map {
+            Point.fromLngLat(it.longitude, it.latitude)
+        }))
 }

@@ -16,9 +16,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.mapbox.android.gestures.MoveGestureDetector
-import com.mapbox.geojson.Feature
-import com.mapbox.geojson.LineString
-import com.mapbox.geojson.Point
 import com.mapbox.mapboxsdk.Mapbox
 import com.mapbox.mapboxsdk.camera.CameraPosition
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory
@@ -41,7 +38,6 @@ import net.graphmasters.multiplatform.navigation.model.Routable
 import net.graphmasters.multiplatform.navigation.model.RoutableFactory
 import net.graphmasters.multiplatform.navigation.model.Route
 import net.graphmasters.multiplatform.navigation.routing.events.NavigationEventHandler.*
-import net.graphmasters.multiplatform.navigation.routing.progress.RouteProgressTracker
 import net.graphmasters.multiplatform.navigation.routing.progress.RouteProgressTracker.RouteProgress
 import net.graphmasters.multiplatform.navigation.routing.state.NavigationStateProvider.*
 import net.graphmasters.multiplatform.navigation.ui.camera.CameraSdk
@@ -355,7 +351,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
     }
 
     override fun onBackPressed() {
-        if (this.navigationSdk.navigationStateProvider.navigationState.currentlyNavigating) {
+        if (this.navigating) {
             this.navigationSdk.navigationEngine.stopNavigation()
             this.drawRoute(emptyList())
         } else {
@@ -390,7 +386,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
         }
 
         this.lastLocation = location
-        if (!this.navigationSdk.navigationStateProvider.navigationState.initialized) {
+        if (!this.navigating) {
             this.mapboxMap?.locationComponent?.forceLocationUpdate(location)
         }
 
@@ -493,12 +489,8 @@ class MainActivity : AppCompatActivity(), LocationListener,
         this.remainingTravelTime.text = "${routeProgress.remainingTravelTime.minutes()}min"
     }
 
-    private fun drawRoute(latLng: List<LatLng>) {
-        val feature = Feature.fromGeometry(LineString.fromLngLats(latLng.map {
-            Point.fromLngLat(it.longitude, it.latitude)
-        }))
-
-        this.routeSource.setGeoJson(feature)
+    private fun drawRoute(polyline: List<LatLng>) {
+        this.routeSource.setGeoJson(EntityConverter.convert(polyline))
     }
 
     private fun initCameraSdk() {
