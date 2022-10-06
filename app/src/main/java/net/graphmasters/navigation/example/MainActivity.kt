@@ -10,7 +10,6 @@ import android.location.LocationManager
 import android.os.Bundle
 import android.util.Log
 import android.view.View
-import android.view.WindowManager
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -44,13 +43,13 @@ import net.graphmasters.multiplatform.navigation.model.Route
 import net.graphmasters.multiplatform.navigation.routing.events.NavigationEventHandler.*
 import net.graphmasters.multiplatform.navigation.routing.progress.RouteProgressTracker
 import net.graphmasters.multiplatform.navigation.routing.state.NavigationStateProvider.*
+import net.graphmasters.multiplatform.navigation.ui.camera.CameraSdk
+import net.graphmasters.multiplatform.navigation.ui.camera.CameraUpdate
+import net.graphmasters.multiplatform.navigation.ui.camera.NavigationCameraHandler
 import net.graphmasters.multiplatform.navigation.vehicle.CarConfig
 import net.graphmasters.multiplatform.navigation.vehicle.MotorbikeConfig
 import net.graphmasters.multiplatform.navigation.vehicle.TruckConfig
 import net.graphmasters.multiplatform.navigation.vehicle.VehicleConfig
-import net.graphmasters.multiplatform.ui.camera.CameraSdk
-import net.graphmasters.multiplatform.ui.camera.CameraUpdate
-import net.graphmasters.multiplatform.ui.camera.NavigationCameraHandler
 import net.graphmasters.navigation.example.utils.EntityConverter
 import net.graphmasters.navigation.example.utils.SystemUtils
 
@@ -104,7 +103,6 @@ class MainActivity : AppCompatActivity(), LocationListener,
             when (value) {
                 CameraMode.FREE -> {
                     this.cameraSdk.navigationCameraHandler.stopCameraTracking()
-                    this.mapboxMap?.setPadding(0, 0, 0, 0)
                     this.navigationInfoCard?.visibility = View.GONE
                     this.positionButton?.visibility = View.VISIBLE
                 }
@@ -143,14 +141,9 @@ class MainActivity : AppCompatActivity(), LocationListener,
     private var lastLocation: Location? = null
 
     private val locationPermissionGranted: Boolean
-        get() {
-            return ContextCompat.checkSelfPermission(
-                this, Manifest.permission.ACCESS_FINE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
-        }
-
-    private val screenHeight: Int
-        get() = (this.getSystemService(WINDOW_SERVICE) as WindowManager).defaultDisplay.height
+        get() = ContextCompat.checkSelfPermission(
+            this, Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -184,19 +177,14 @@ class MainActivity : AppCompatActivity(), LocationListener,
                     else -> 0
                 }
             ) { dialog, which ->
-                kotlin.run {
-                    dialog.dismiss()
-                    this.vehicleConfig = when (which) {
-                        1 -> TRUCK_CONFIG
-                        2 -> MOTORBIKE_CONFIG
-                        else -> CAR_CONFIG
-                    }
+                dialog.dismiss()
+                this.vehicleConfig = when (which) {
+                    1 -> TRUCK_CONFIG
+                    2 -> MOTORBIKE_CONFIG
+                    else -> CAR_CONFIG
                 }
-
             }
-            .setNeutralButton(
-                "Cancel"
-            ) { dialog, _ -> dialog.dismiss() }
+            .setNeutralButton("Cancel") { dialog, _ -> dialog.dismiss() }
             .show()
 
     }
@@ -394,22 +382,20 @@ class MainActivity : AppCompatActivity(), LocationListener,
     }
 
     override fun onLocationChanged(location: Location) {
-        location?.let {
-            if (this.lastLocation == null) {
-                this.lastLocation = it
-                this.moveCameraCurrentPosition()
-            }
-
-            this.lastLocation = it
-            if (!this.navigationSdk.navigationStateProvider.navigationState.initialized) {
-                this.mapboxMap?.locationComponent?.forceLocationUpdate(location)
-            }
-
-            // Publish the current location to the SDK
-            this.navigationSdk.updateLocation(
-                location = EntityConverter.convert(location)
-            )
+        if (this.lastLocation == null) {
+            this.lastLocation = location
+            this.moveCameraCurrentPosition()
         }
+
+        this.lastLocation = location
+        if (!this.navigationSdk.navigationStateProvider.navigationState.initialized) {
+            this.mapboxMap?.locationComponent?.forceLocationUpdate(location)
+        }
+
+        // Publish the current location to the SDK
+        this.navigationSdk.updateLocation(
+            location = EntityConverter.convert(location)
+        )
     }
 
     override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {
@@ -453,9 +439,12 @@ class MainActivity : AppCompatActivity(), LocationListener,
         Log.d(TAG, "onRouteRequestFailed $e")
     }
 
-    override fun onOffRoute() {
-        Toast.makeText(this, "onOffRoute", Toast.LENGTH_SHORT).show()
-        Log.d(TAG, "onOffRoute")
+    override fun onOffRouteDetected() {
+        Log.d(TAG, "onOffRouteDetected")
+    }
+
+    override fun onOffRouteVerified() {
+        Log.d(TAG, "onOffRouteVerified")
     }
 
     override fun onNavigationStateInitialized(navigationState: NavigationState) {
@@ -474,7 +463,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
             this.updateNavigationInfoViews(routeProgress)
 
             // Updating the Mapbox position icon with the location on the route instead of the raw one received from the GPS
-            routeProgress.currentLocationOnRoute?.let {
+            routeProgress.currentLocationOnRoute.let {
                 this.mapboxMap?.locationComponent?.forceLocationUpdate(
                     EntityConverter.convert(
                         it
@@ -505,45 +494,17 @@ class MainActivity : AppCompatActivity(), LocationListener,
     }
 
     private fun initCameraSdk() {
-        this.cameraSdk = CameraSdk(navigationSdk = this.navigationSdk)
+        this.cameraSdk = CameraSdk(this, this.navigationSdk, Duration.fromSeconds(2))
 
         // Attach listener and you will be notified about new camera updates
         this.cameraSdk.navigationCameraHandler.addCameraUpdateListener(this)
     }
 
     override fun onCameraUpdateReady(cameraUpdate: CameraUpdate) {
-        // Convert the CameraUpdate provided by the SDK into the desired format - in this case Mapbox
-        val builder = CameraPosition.Builder()
-        cameraUpdate.bearing?.let {
-            builder.bearing(it.toDouble())
-        }
-        cameraUpdate.tilt?.let {
-            builder.tilt(it.toDouble())
-        }
-        cameraUpdate.zoom?.let {
-            builder.zoom(it.toDouble())
-        }
-
-        builder.target(
-            com.mapbox.mapboxsdk.geometry.LatLng(
-                cameraUpdate.latLng.latitude,
-                cameraUpdate.latLng.longitude
-            )
-        )
-
-        // The padding is represented as four float values ranging from 0..1 .
-        // 0 would represent a padding of 0, while 1 would represent the max height or max width of the device's screen
-        this.mapboxMap?.setPadding(
-            0,
-            0,
-            0,
-            (cameraUpdate.padding.bottom * this.screenHeight * -1).toInt()
-        )
-
-        // Pass the update to Mapbox
+        // Convert the update to the mapbox model and pass to the map
         this.mapboxMap?.animateCamera(
-            CameraUpdateFactory.newCameraPosition(builder.build()),
-            cameraUpdate.duration.milliseconds().toInt() * 2
+            EntityConverter.convert(cameraUpdate),
+            cameraUpdate.duration?.milliseconds()?.toInt() ?: 1000
         )
     }
 
@@ -552,29 +513,23 @@ class MainActivity : AppCompatActivity(), LocationListener,
 
         try {
             this.navigationSdk.navigationEngine.startNavigation(
-                RoutableFactory.fromLatLng(
-                    LatLng(
-                        point.latitude,
-                        point.longitude
-                    )
-                )
+                RoutableFactory.create(LatLng(point.latitude, point.longitude))
             )
         } catch (e: Exception) {
             Toast.makeText(this, e.message, Toast.LENGTH_LONG).show()
+            e.printStackTrace()
         }
 
         return true
     }
 
-    override fun onMoveBegin(detector: MoveGestureDetector) {
-    }
+    override fun onMoveBegin(detector: MoveGestureDetector) {}
 
     override fun onMove(detector: MoveGestureDetector) {
         this.cameraMode = CameraMode.FREE
     }
 
-    override fun onMoveEnd(detector: MoveGestureDetector) {
-    }
+    override fun onMoveEnd(detector: MoveGestureDetector) {}
 
     override fun onMapClick(point: com.mapbox.mapboxsdk.geometry.LatLng): Boolean {
         this.cameraMode = CameraMode.FREE
