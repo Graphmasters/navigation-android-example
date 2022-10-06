@@ -106,7 +106,6 @@ class MainActivity : AppCompatActivity(), LocationListener,
             when (value) {
                 CameraMode.FREE -> {
                     this.cameraSdk.navigationCameraHandler.stopCameraTracking()
-                    this.mapboxMap?.setPadding(0, 0, 0, 0)
                     this.navigationInfoCard?.visibility = View.GONE
                     this.positionButton?.visibility = View.VISIBLE
                 }
@@ -145,14 +144,9 @@ class MainActivity : AppCompatActivity(), LocationListener,
     private var lastLocation: Location? = null
 
     private val locationPermissionGranted: Boolean
-        get() {
-            return ContextCompat.checkSelfPermission(
-                this, Manifest.permission.ACCESS_FINE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
-        }
-
-    private val screenHeight: Int
-        get() = (this.getSystemService(WINDOW_SERVICE) as WindowManager).defaultDisplay.height
+        get() = ContextCompat.checkSelfPermission(
+            this, Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -186,19 +180,14 @@ class MainActivity : AppCompatActivity(), LocationListener,
                     else -> 0
                 }
             ) { dialog, which ->
-                kotlin.run {
-                    dialog.dismiss()
-                    this.vehicleConfig = when (which) {
-                        1 -> TRUCK_CONFIG
-                        2 -> MOTORBIKE_CONFIG
-                        else -> CAR_CONFIG
-                    }
+                dialog.dismiss()
+                this.vehicleConfig = when (which) {
+                    1 -> TRUCK_CONFIG
+                    2 -> MOTORBIKE_CONFIG
+                    else -> CAR_CONFIG
                 }
-
             }
-            .setNeutralButton(
-                "Cancel"
-            ) { dialog, _ -> dialog.dismiss() }
+            .setNeutralButton("Cancel") { dialog, _ -> dialog.dismiss() }
             .show()
 
     }
