@@ -1,0 +1,19 @@
+name:
+  Build
+on:
+  push
+
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      MAPBOX_SDK_TOKEN: ${{secrets.MAPBOX_SDK_TOKEN}}
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@v2
+      - name: Build the app
+        run: ./gradlew build
