@@ -10,7 +10,6 @@ import android.location.LocationManager
 import android.os.Bundle
 import android.util.Log
 import android.view.View
-import android.view.WindowManager
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -33,8 +32,6 @@ import com.mapbox.mapboxsdk.style.layers.Property
 import com.mapbox.mapboxsdk.style.layers.PropertyFactory.*
 import com.mapbox.mapboxsdk.style.sources.GeoJsonSource
 import kotlinx.android.synthetic.main.activity_main.*
-import net.graphmasters.multiplatform.core.logging.AndroidLogger
-import net.graphmasters.multiplatform.core.logging.GMLog
 import net.graphmasters.multiplatform.core.model.LatLng
 import net.graphmasters.multiplatform.core.units.Duration
 import net.graphmasters.multiplatform.core.units.Length
@@ -466,7 +463,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
             this.updateNavigationInfoViews(routeProgress)
 
             // Updating the Mapbox position icon with the location on the route instead of the raw one received from the GPS
-            routeProgress.currentLocationOnRoute?.let {
+            routeProgress.currentLocationOnRoute.let {
                 this.mapboxMap?.locationComponent?.forceLocationUpdate(
                     EntityConverter.convert(
                         it
@@ -507,7 +504,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
         // Convert the update to the mapbox model and pass to the map
         this.mapboxMap?.animateCamera(
             EntityConverter.convert(cameraUpdate),
-            (cameraUpdate.duration?.milliseconds()?.toInt() ?: 1000) * 2
+            cameraUpdate.duration?.milliseconds()?.toInt() ?: 1000
         )
     }
 
@@ -516,29 +513,23 @@ class MainActivity : AppCompatActivity(), LocationListener,
 
         try {
             this.navigationSdk.navigationEngine.startNavigation(
-                RoutableFactory.create(
-                    LatLng(
-                        point.latitude,
-                        point.longitude
-                    )
-                )
+                RoutableFactory.create(LatLng(point.latitude, point.longitude))
             )
         } catch (e: Exception) {
             Toast.makeText(this, e.message, Toast.LENGTH_LONG).show()
+            e.printStackTrace()
         }
 
         return true
     }
 
-    override fun onMoveBegin(detector: MoveGestureDetector) {
-    }
+    override fun onMoveBegin(detector: MoveGestureDetector) {}
 
     override fun onMove(detector: MoveGestureDetector) {
         this.cameraMode = CameraMode.FREE
     }
 
-    override fun onMoveEnd(detector: MoveGestureDetector) {
-    }
+    override fun onMoveEnd(detector: MoveGestureDetector) {}
 
     override fun onMapClick(point: com.mapbox.mapboxsdk.geometry.LatLng): Boolean {
         this.cameraMode = CameraMode.FREE
