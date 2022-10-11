@@ -21,6 +21,7 @@ import com.mapbox.geojson.Feature
 import com.mapbox.geojson.LineString
 import com.mapbox.geojson.Point
 import com.mapbox.mapboxsdk.Mapbox
+import com.mapbox.mapboxsdk.WellKnownTileServer
 import com.mapbox.mapboxsdk.camera.CameraPosition
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory
 import com.mapbox.mapboxsdk.location.LocationComponent
@@ -155,7 +156,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        Mapbox.getInstance(this, BuildConfig.MAPBOX_TOKEN);
+        Mapbox.getInstance(this, null, WellKnownTileServer.MapLibre);
         setContentView(R.layout.activity_main)
 
         this.vehicleConfigButton.setOnClickListener {
