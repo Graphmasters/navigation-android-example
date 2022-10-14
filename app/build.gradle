@@ -6,7 +6,7 @@ plugins {
 
 android {
     compileSdkVersion 30
-    buildToolsVersion "30.0.2"
+    buildToolsVersion "30.0.3"
 
     defaultConfig {
         applicationId "net.graphmasters.navigation.example"
@@ -53,11 +53,12 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.1.2'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
 
-    implementation(group: 'net.graphmasters.multiplatform', name: 'multiplatform-navigation-aar', version: '1.23.0')
-    implementation(group: 'net.graphmasters.multiplatform', name: 'multiplatform-navigation-ui-aar', version: '1.13.2', ext: 'aar')
+    implementation('net.graphmasters.multiplatform:multiplatform-core-aar:1.11.5')
+    implementation('net.graphmasters.multiplatform:multiplatform-navigation-aar:1.26.24')
+    implementation('net.graphmasters.multiplatform:multiplatform-navigation-ui-aar:1.22.0') { transitive false }
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-    implementation 'org.maplibre.gl:android-sdk:9.5.2'
+    implementation 'com.mapbox.mapboxsdk:mapbox-android-sdk:9.7.1'
     implementation 'com.squareup.okhttp3:okhttp:4.4.0'
     implementation 'com.squareup.retrofit2:retrofit:2.6.1'
     implementation 'com.squareup.retrofit2:converter-gson:2.6.1'
