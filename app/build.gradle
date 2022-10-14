@@ -53,8 +53,9 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.1.2'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
 
-    implementation(group: 'net.graphmasters.multiplatform', name: 'multiplatform-navigation-aar', version: '1.23.0')
-    implementation(group: 'net.graphmasters.multiplatform', name: 'multiplatform-navigation-ui-aar', version: '1.13.2', ext: 'aar')
+    implementation 'net.graphmasters.multiplatform:multiplatform-navigation-aar:1.26.24'
+    implementation 'net.graphmasters.multiplatform:multiplatform-navigation-ui-aar:1.22.4'
+    implementation 'net.graphmasters.multiplatform:multiplatform-core-aar:1.11.5'
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     implementation 'com.mapbox.mapboxsdk:mapbox-android-sdk:9.7.1'
