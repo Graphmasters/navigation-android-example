@@ -20,8 +20,6 @@ android {
         // Api key used to access NUNAV services
         buildConfigField "String", "NUNAV_API_KEY", "\"" + System.getenv("NUNAV_API_TOKEN") + "\""
 
-        // Mapbox token to load map data
-        buildConfigField "String", "MAPBOX_TOKEN", "\"" + System.getenv("MAPBOX_TOKEN") + "\""
     }
 
     buildTypes {
