@@ -10,8 +10,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      MAPBOX_SDK_TOKEN: ${{secrets.MAPBOX_SDK_TOKEN}}
+
     steps:
       - name: Checkout the code
         uses: actions/checkout@v2
