@@ -19,7 +19,8 @@ android {
 
         // Api key used to access NUNAV services
         buildConfigField "String", "NUNAV_API_KEY", "\"" + System.getenv("NUNAV_API_TOKEN") + "\""
-
+        // Map style used for NUNAV services
+        buildConfigField "String", "MAP_STYLE_URL", "\"" + System.getenv("MAP_STYLE_URL") + "\""
     }
 
     buildTypes {

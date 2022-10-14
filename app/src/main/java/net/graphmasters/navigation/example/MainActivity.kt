@@ -185,7 +185,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
     private fun initMapbox(savedInstanceState: Bundle?) {
         mapView?.onCreate(savedInstanceState)
         mapView?.getMapAsync { mapboxMap ->
-            mapboxMap.setStyle("https://tiles.graphmasters.net/styles/nunav-light-mobile-v1.1/style.json") {
+            mapboxMap.setStyle(BuildConfig.MAP_STYLE_URL) {
                 Log.d(TAG, "Map ready")
                 this.mapboxMap = mapboxMap
                 mapboxMap.addOnMapLongClickListener(this)
