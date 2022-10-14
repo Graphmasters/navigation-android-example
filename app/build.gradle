@@ -56,7 +56,7 @@ dependencies {
     implementation('net.graphmasters.multiplatform:multiplatform-navigation-ui-aar:1.22.5') { transitive false }
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-    implementation 'com.mapbox.mapboxsdk:mapbox-android-sdk:9.7.1'
+    implementation 'org.maplibre.gl:android-sdk:9.5.2'
     implementation 'com.squareup.okhttp3:okhttp:4.4.0'
     implementation 'com.squareup.retrofit2:retrofit:2.6.1'
     implementation 'com.squareup.retrofit2:converter-gson:2.6.1'
