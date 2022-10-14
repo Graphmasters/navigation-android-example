@@ -44,6 +44,11 @@ import net.graphmasters.multiplatform.navigation.model.Route
 import net.graphmasters.multiplatform.navigation.routing.events.NavigationEventHandler.*
 import net.graphmasters.multiplatform.navigation.routing.progress.RouteProgressTracker
 import net.graphmasters.multiplatform.navigation.routing.state.NavigationStateProvider.*
+import net.graphmasters.multiplatform.navigation.ui.audio.AudioComponent
+import net.graphmasters.multiplatform.navigation.ui.audio.config.AudioConfig
+import net.graphmasters.multiplatform.navigation.ui.audio.config.AudioConfigProvider
+import net.graphmasters.multiplatform.navigation.ui.audio.player.ConfigurableAudioPlayer
+import net.graphmasters.multiplatform.navigation.ui.audio.tts.TextToSpeechJobFactory
 import net.graphmasters.multiplatform.navigation.vehicle.CarConfig
 import net.graphmasters.multiplatform.navigation.vehicle.MotorbikeConfig
 import net.graphmasters.multiplatform.navigation.vehicle.TruckConfig
@@ -51,8 +56,16 @@ import net.graphmasters.multiplatform.navigation.vehicle.VehicleConfig
 import net.graphmasters.multiplatform.navigation.ui.camera.CameraSdk
 import net.graphmasters.multiplatform.navigation.ui.camera.CameraUpdate
 import net.graphmasters.multiplatform.navigation.ui.camera.NavigationCameraHandler
+import net.graphmasters.multiplatform.navigation.ui.detach.OffRouteDetachStateProvider
+import net.graphmasters.multiplatform.navigation.ui.locale.LanguageProvider
+import net.graphmasters.multiplatform.navigation.ui.voice.instructions.NavigationVoiceInstructionHandler
+import net.graphmasters.multiplatform.navigation.ui.voice.instructions.VoiceInstructionDispatcher
+import net.graphmasters.multiplatform.navigation.ui.voice.instructions.VoiceInstructionHandler
+import net.graphmasters.multiplatform.navigation.ui.voice.instructions.VoiceInstructionStringGenerator
+import net.graphmasters.multiplatform.navigation.ui.voice.instructions.strings.localization.LocaleVoiceInstructionStringGenerator
 import net.graphmasters.navigation.example.utils.EntityConverter
 import net.graphmasters.navigation.example.utils.SystemUtils
+import java.util.*
 
 
 class MainActivity : AppCompatActivity(), LocationListener,
@@ -96,6 +109,8 @@ class MainActivity : AppCompatActivity(), LocationListener,
     enum class CameraMode {
         FREE, FOLLOW
     }
+
+    private val context = this
 
     private var cameraMode: CameraMode = CameraMode.FREE
         set(value) {
@@ -152,10 +167,84 @@ class MainActivity : AppCompatActivity(), LocationListener,
     private val screenHeight: Int
         get() = (this.getSystemService(WINDOW_SERVICE) as WindowManager).defaultDisplay.height
 
+    private fun createVoiceInstructionStringGenerator(
+        locale: Locale,
+    ): VoiceInstructionStringGenerator = LocaleVoiceInstructionStringGenerator(
+        localeProvider = object : LanguageProvider {
+            override val languageCode: String
+                get() = locale.language
+            override val regionCode: String?
+                get() = locale.country
+        }
+    )
+
+    private fun createAudioPlayer() =
+        ConfigurableAudioPlayer(this, object : AudioConfigProvider {
+            override val audioConfig: AudioConfig
+                get() = AudioConfig(
+                    desiredOutputType = AudioConfig.OutputType.DEVICE,
+                    audioStream = 0,
+                    playbackDelay = null,
+                    appVolume = 60,
+                    focusType = AudioConfig.FocusType.NONE,
+                    showVolumeUi = false)
+        })
+
+    private fun createVoiceInstructionDispatcher() =
+        object : VoiceInstructionDispatcher {
+            override fun dispatch(voiceInstruction: List<String>, onDone: (String) -> Unit) {
+                voiceInstruction.forEach {
+                    Log.d(TAG, it)
+                    createAudioPlayer().execute(TextToSpeechJobFactory.create(
+                        context,
+                        it,
+                        AudioConfig(
+                            desiredOutputType = AudioConfig.OutputType.DEVICE,
+                            audioStream = 0,
+                            playbackDelay = null,
+                            appVolume = 60,
+                            focusType = AudioConfig.FocusType.NONE,
+                            showVolumeUi = false
+                        )
+                    ))
+                }
+            }
+        }
+
+    private fun initAudioComponent() {
+        AudioComponent.Companion.init(
+            this,
+            object : AudioConfigProvider {
+                override val audioConfig: AudioConfig
+                    get() = AudioConfig(
+                        desiredOutputType = AudioConfig.OutputType.DEVICE,
+                        audioStream = 0,
+                        playbackDelay = null,
+                        appVolume = 0,
+                        focusType = AudioConfig.FocusType.NONE,
+                        showVolumeUi = false)
+            })
+    }
+
+
+    private lateinit var voiceInstructionHandler: VoiceInstructionHandler
+
+    private fun initVoiceInstructionHandler() {
+        this.initAudioComponent()
+
+        this.voiceInstructionHandler = NavigationVoiceInstructionHandler(
+            this.navigationSdk,
+            this.createVoiceInstructionStringGenerator(
+            Locale.getDefault()),
+            this.createVoiceInstructionDispatcher()
+        )
+    }
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        Mapbox.getInstance(this, BuildConfig.MAPBOX_TOKEN);
+        Mapbox.getInstance(this, BuildConfig.MAPBOX_TOKEN)
         setContentView(R.layout.activity_main)
 
         this.vehicleConfigButton.setOnClickListener {
@@ -173,6 +262,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
         this.initMapbox(savedInstanceState)
         this.initNavigationSDK()
         this.initCameraSdk()
+        this.initVoiceInstructionHandler()
     }
 
     private fun showVehicleConfigSelection() {
@@ -280,10 +370,10 @@ class MainActivity : AppCompatActivity(), LocationListener,
             LocationComponentActivationOptions.builder(this, style)
                 .useDefaultLocationEngine(false)
                 .build()
-        locationComponent.activateLocationComponent(locationComponentActivationOptions);
+        locationComponent.activateLocationComponent(locationComponentActivationOptions)
 
-        locationComponent.isLocationComponentEnabled = true;
-        locationComponent.renderMode = RenderMode.GPS;
+        locationComponent.isLocationComponentEnabled = true
+        locationComponent.renderMode = RenderMode.GPS
     }
 
     private fun initRouteLayer(style: Style) {
@@ -394,7 +484,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
     }
 
     override fun onLocationChanged(location: Location) {
-        location?.let {
+        location.let {
             if (this.lastLocation == null) {
                 this.lastLocation = it
                 this.moveCameraCurrentPosition()
@@ -426,6 +516,9 @@ class MainActivity : AppCompatActivity(), LocationListener,
 
     override fun onNavigationStarted(routable: Routable) {
         Toast.makeText(this, "onNavigationStarted", Toast.LENGTH_SHORT).show()
+        this.voiceInstructionHandler.enabled = true
+        val t = this.voiceInstructionHandler.enabled
+        val s = t
         Log.d(TAG, "onNavigationStarted $routable")
     }
 
@@ -453,11 +546,6 @@ class MainActivity : AppCompatActivity(), LocationListener,
         Log.d(TAG, "onRouteRequestFailed $e")
     }
 
-    override fun onOffRoute() {
-        Toast.makeText(this, "onOffRoute", Toast.LENGTH_SHORT).show()
-        Log.d(TAG, "onOffRoute")
-    }
-
     override fun onNavigationStateInitialized(navigationState: NavigationState) {
         Toast.makeText(this, "onNavigationStateInitialized", Toast.LENGTH_SHORT).show()
         Log.d(TAG, "onNavigationStateInitialized $navigationState")
@@ -474,7 +562,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
             this.updateNavigationInfoViews(routeProgress)
 
             // Updating the Mapbox position icon with the location on the route instead of the raw one received from the GPS
-            routeProgress.currentLocationOnRoute?.let {
+            routeProgress.currentLocationOnRoute.let {
                 this.mapboxMap?.locationComponent?.forceLocationUpdate(
                     EntityConverter.convert(
                         it
@@ -507,7 +595,9 @@ class MainActivity : AppCompatActivity(), LocationListener,
     private fun initCameraSdk() {
         this.cameraSdk = CameraSdk(
             context = this,
-            navigationSdk = this.navigationSdk)
+            navigationSdk = this.navigationSdk,
+            detachStateProvider = OffRouteDetachStateProvider(this.navigationSdk)
+        )
 
         // Attach listener and you will be notified about new camera updates
         this.cameraSdk.navigationCameraHandler.addCameraUpdateListener(this)
@@ -581,5 +671,14 @@ class MainActivity : AppCompatActivity(), LocationListener,
     override fun onMapClick(point: com.mapbox.mapboxsdk.geometry.LatLng): Boolean {
         this.cameraMode = CameraMode.FREE
         return false
+    }
+
+    override fun onOffRouteDetected() {
+        Toast.makeText(this, "onOffRouteDetected", Toast.LENGTH_SHORT).show()
+        Log.d(TAG, "onOffRoute")
+    }
+
+    override fun onOffRouteVerified() {
+        Log.d(TAG, "onOffRouteVerified")
     }
 }
