@@ -145,6 +145,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
             this, Manifest.permission.ACCESS_FINE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
 
+    private var voiceInstructionComponent: VoiceInstructionComponent? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -163,7 +164,10 @@ class MainActivity : AppCompatActivity(), LocationListener,
         this.initMapbox(savedInstanceState)
         this.initNavigationSdk()
         this.initCameraSdk()
-        VoiceInstructionComponent.Companion.init(this, this.navigationSdk)
+        this.voiceInstructionComponent = VoiceInstructionComponent.Companion.init(
+            this,
+            this.navigationSdk
+        )
     }
 
     private fun showVehicleConfigSelection() {
@@ -408,7 +412,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
 
     override fun onNavigationStarted(routable: Routable) {
         Toast.makeText(this, "onNavigationStarted", Toast.LENGTH_SHORT).show()
-        VoiceInstructionComponent.Companion.voiceInstructionHandler.enabled = true
+        this.voiceInstructionComponent?.enable()
         Log.d(TAG, "onNavigationStarted $routable")
     }
 
