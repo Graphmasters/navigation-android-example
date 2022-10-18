@@ -18,13 +18,9 @@ this.navigationSdk = NavigationSdk(
 )
 ```
 
-1. For map rendering the Mapbox Android SDK is used. You can create a free account with them and create a test token. Apply the token either in the app's `build.gradle` ...
+1. For map rendering you need to apply the NUNAV map style url in the app's `build.gradle` ...
 ```
-buildConfigField "String", "MAPBOX_TOKEN", "\"" + "your_mapbox_token" + "\""
-```
-... or directly in code
-```
-Mapbox.getInstance(this, "your_mapbox_token");
+buildConfigField "String", "MAP_STYLE_URL", "\"" + System.getenv("MAP_STYLE_URL") + "\""
 ```
 
 ## Usage
