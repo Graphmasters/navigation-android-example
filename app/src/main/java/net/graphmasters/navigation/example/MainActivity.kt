@@ -415,8 +415,6 @@ class MainActivity : AppCompatActivity(), LocationListener,
     override fun onNavigationStopped() {
         Toast.makeText(this, "onNavigationStopped", Toast.LENGTH_SHORT).show()
         Log.d(TAG, "onNavigationStopped")
-
-        VoiceInstructionComponent.Companion.voiceInstructionHandler.enabled = true
         this.cameraMode = CameraMode.FREE
         this.navigationInfoCard.visibility = View.GONE
     }
