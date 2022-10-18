@@ -184,7 +184,6 @@ class MainActivity : AppCompatActivity(), LocationListener,
             }
             .setNeutralButton("Cancel") { dialog, _ -> dialog.dismiss() }
             .show()
-
     }
 
     private fun initMapbox(savedInstanceState: Bundle?) {
