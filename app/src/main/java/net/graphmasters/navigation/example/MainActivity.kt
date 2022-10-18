@@ -17,6 +17,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.mapbox.android.gestures.MoveGestureDetector
 import com.mapbox.mapboxsdk.Mapbox
+import com.mapbox.mapboxsdk.WellKnownTileServer
 import com.mapbox.mapboxsdk.camera.CameraPosition
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory
 import com.mapbox.mapboxsdk.location.LocationComponent
@@ -145,7 +146,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        Mapbox.getInstance(this, BuildConfig.MAPBOX_TOKEN);
+        Mapbox.getInstance(this, null, WellKnownTileServer.MapLibre);
         setContentView(R.layout.activity_main)
 
         this.vehicleConfigButton.setOnClickListener {
@@ -179,13 +180,12 @@ class MainActivity : AppCompatActivity(), LocationListener,
             }
             .setNeutralButton("Cancel") { dialog, _ -> dialog.dismiss() }
             .show()
-
     }
 
     private fun initMapbox(savedInstanceState: Bundle?) {
         mapView?.onCreate(savedInstanceState)
         mapView?.getMapAsync { mapboxMap ->
-            mapboxMap.setStyle(Style.MAPBOX_STREETS) {
+            mapboxMap.setStyle(BuildConfig.MAP_STYLE_URL) {
                 Log.d(TAG, "Map ready")
                 this.mapboxMap = mapboxMap
                 mapboxMap.addOnMapLongClickListener(this)
