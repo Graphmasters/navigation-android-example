@@ -7,7 +7,6 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
-import android.media.AudioManager
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -41,27 +40,16 @@ import net.graphmasters.multiplatform.navigation.model.Route
 import net.graphmasters.multiplatform.navigation.routing.events.NavigationEventHandler.*
 import net.graphmasters.multiplatform.navigation.routing.progress.RouteProgressTracker.RouteProgress
 import net.graphmasters.multiplatform.navigation.routing.state.NavigationStateProvider.*
-import net.graphmasters.multiplatform.navigation.ui.audio.AudioComponent
-import net.graphmasters.multiplatform.navigation.ui.audio.config.AudioConfig
-import net.graphmasters.multiplatform.navigation.ui.audio.config.AudioConfigProvider
-import net.graphmasters.multiplatform.navigation.ui.audio.player.ConfigurableAudioPlayer
-import net.graphmasters.multiplatform.navigation.ui.audio.tts.TextToSpeechJobFactory
+import net.graphmasters.multiplatform.navigation.ui.audio.VoiceInstructionComponent
+import net.graphmasters.multiplatform.navigation.ui.camera.CameraSdk
+import net.graphmasters.multiplatform.navigation.ui.camera.CameraUpdate
+import net.graphmasters.multiplatform.navigation.ui.camera.NavigationCameraHandler
 import net.graphmasters.multiplatform.navigation.vehicle.CarConfig
 import net.graphmasters.multiplatform.navigation.vehicle.MotorbikeConfig
 import net.graphmasters.multiplatform.navigation.vehicle.TruckConfig
 import net.graphmasters.multiplatform.navigation.vehicle.VehicleConfig
-import net.graphmasters.multiplatform.navigation.ui.camera.CameraSdk
-import net.graphmasters.multiplatform.navigation.ui.camera.CameraUpdate
-import net.graphmasters.multiplatform.navigation.ui.camera.NavigationCameraHandler
-import net.graphmasters.multiplatform.navigation.ui.locale.LanguageProvider
-import net.graphmasters.multiplatform.navigation.ui.voice.instructions.NavigationVoiceInstructionHandler
-import net.graphmasters.multiplatform.navigation.ui.voice.instructions.VoiceInstructionDispatcher
-import net.graphmasters.multiplatform.navigation.ui.voice.instructions.VoiceInstructionHandler
-import net.graphmasters.multiplatform.navigation.ui.voice.instructions.VoiceInstructionStringGenerator
-import net.graphmasters.multiplatform.navigation.ui.voice.instructions.strings.localization.LocaleVoiceInstructionStringGenerator
 import net.graphmasters.navigation.example.utils.EntityConverter
 import net.graphmasters.navigation.example.utils.SystemUtils
-import java.util.*
 
 
 class MainActivity : AppCompatActivity(), LocationListener,
@@ -157,65 +145,6 @@ class MainActivity : AppCompatActivity(), LocationListener,
             this, Manifest.permission.ACCESS_FINE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
 
-    private fun initVoiceInstructionHandler() {
-        this.initAudioComponent()
-
-        this.voiceInstructionHandler = NavigationVoiceInstructionHandler(
-            this.navigationSdk,
-            this.createVoiceInstructionStringGenerator(
-                Locale.getDefault()),
-            this.createVoiceInstructionDispatcher()
-        )
-    }
-
-    private fun initAudioComponent() {
-        AudioComponent.Companion.init(
-            this,
-            object : AudioConfigProvider {
-                override val audioConfig: AudioConfig
-                    get() = createAudioConfig()
-            })
-    }
-
-    private fun createVoiceInstructionStringGenerator(
-        locale: Locale,
-    ): VoiceInstructionStringGenerator = LocaleVoiceInstructionStringGenerator(
-        localeProvider = object : LanguageProvider {
-            override val languageCode: String
-                get() = locale.language
-            override val regionCode: String?
-                get() = locale.country
-        }
-    )
-
-    private fun createVoiceInstructionDispatcher() =
-        object : VoiceInstructionDispatcher {
-            override fun dispatch(voiceInstruction: List<String>, onDone: (String) -> Unit) {
-                voiceInstruction.forEach {
-                    Log.d(TAG, it)
-                    createAudioPlayer().playTextToSpeech(
-                        text = it,
-                        config = null,
-                        cancelable = false,
-                        priority = 1L,
-                        callback = null
-                    )
-                }
-            }
-        }
-
-    private fun createAudioPlayer() = //Todo: create it only once
-        ConfigurableAudioPlayer(this, object : AudioConfigProvider {
-            override val audioConfig: AudioConfig
-                get() = createAudioConfig()
-        })
-
-    private fun createAudioConfig() =
-        AudioConfig(
-            desiredOutputType = AudioConfig.OutputType.DEVICE,
-            audioStream = AudioManager.STREAM_MUSIC)
-
-    private lateinit var voiceInstructionHandler: VoiceInstructionHandler
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -234,7 +163,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
         this.initMapbox(savedInstanceState)
         this.initNavigationSdk()
         this.initCameraSdk()
-        this.initVoiceInstructionHandler()
+        VoiceInstructionComponent.Companion.init(this, this.navigationSdk)
     }
 
     private fun showVehicleConfigSelection() {
@@ -480,7 +409,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
 
     override fun onNavigationStarted(routable: Routable) {
         Toast.makeText(this, "onNavigationStarted", Toast.LENGTH_SHORT).show()
-        this.voiceInstructionHandler.enabled = true
+        VoiceInstructionComponent.Companion.voiceInstructionHandler.enabled = true
         Log.d(TAG, "onNavigationStarted $routable")
     }
 
@@ -488,7 +417,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
         Toast.makeText(this, "onNavigationStopped", Toast.LENGTH_SHORT).show()
         Log.d(TAG, "onNavigationStopped")
 
-        this.voiceInstructionHandler.enabled = false
+        VoiceInstructionComponent.Companion.voiceInstructionHandler.enabled = true
         this.cameraMode = CameraMode.FREE
         this.navigationInfoCard.visibility = View.GONE
     }
