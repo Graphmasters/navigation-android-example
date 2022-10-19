@@ -20,8 +20,8 @@ android {
         // Api key used to access NUNAV services
         buildConfigField "String", "NUNAV_API_KEY", "\"" + System.getenv("NUNAV_API_TOKEN") + "\""
 
-        // Mapbox token to load map data
-        buildConfigField "String", "MAPBOX_TOKEN", "\"" + System.getenv("MAPBOX_TOKEN") + "\""
+        // Map style used for NUNAV services
+        buildConfigField "String", "MAP_STYLE_URL", "\"" + System.getenv("MAP_STYLE_URL") + "\""
     }
 
     buildTypes {
@@ -59,7 +59,7 @@ dependencies {
 
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.3.9'
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-    implementation 'com.mapbox.mapboxsdk:mapbox-android-sdk:9.7.1'
+    implementation 'org.maplibre.gl:android-sdk:9.5.2'
     implementation 'com.squareup.okhttp3:okhttp:4.4.0'
     implementation 'com.squareup.retrofit2:retrofit:2.6.1'
     implementation 'com.squareup.retrofit2:converter-gson:2.6.1'
