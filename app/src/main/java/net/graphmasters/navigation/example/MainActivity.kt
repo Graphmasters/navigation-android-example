@@ -424,6 +424,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
         Log.d(TAG, "onNavigationStopped")
         this.cameraMode = CameraMode.FREE
         this.navigationInfoCard.visibility = View.GONE
+        this.voiceInstructionComponent?.enabled = false
     }
 
     override fun onDestinationReached(routable: Routable) {
