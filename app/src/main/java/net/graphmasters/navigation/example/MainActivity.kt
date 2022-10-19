@@ -130,6 +130,8 @@ class MainActivity : AppCompatActivity(), LocationListener,
 
     private lateinit var cameraSdk: CameraSdk
 
+    private lateinit var voiceInstructionComponent: VoiceInstructionComponent
+
     private lateinit var locationManager: LocationManager
 
     private var mapboxMap: MapboxMap? = null
@@ -143,8 +145,6 @@ class MainActivity : AppCompatActivity(), LocationListener,
         get() = ContextCompat.checkSelfPermission(
             this, Manifest.permission.ACCESS_FINE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
-
-    private var voiceInstructionComponent: VoiceInstructionComponent? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -416,7 +416,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
     override fun onNavigationStarted(routable: Routable) {
         Toast.makeText(this, "onNavigationStarted", Toast.LENGTH_SHORT).show()
         Log.d(TAG, "onNavigationStarted $routable")
-        this.voiceInstructionComponent?.enabled = true
+        this.voiceInstructionComponent.enabled = true
     }
 
     override fun onNavigationStopped() {
@@ -424,7 +424,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
         Log.d(TAG, "onNavigationStopped")
         this.cameraMode = CameraMode.FREE
         this.navigationInfoCard.visibility = View.GONE
-        this.voiceInstructionComponent?.enabled = false
+        this.voiceInstructionComponent.enabled = false
     }
 
     override fun onDestinationReached(routable: Routable) {
