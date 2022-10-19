@@ -90,8 +90,6 @@ class MainActivity : AppCompatActivity(), LocationListener,
         FREE, FOLLOW
     }
 
-    private val context = this
-
     private var cameraMode: CameraMode = CameraMode.FREE
         set(value) {
             field = value
