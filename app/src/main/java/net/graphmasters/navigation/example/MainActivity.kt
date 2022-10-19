@@ -41,6 +41,7 @@ import net.graphmasters.multiplatform.navigation.model.Route
 import net.graphmasters.multiplatform.navigation.routing.events.NavigationEventHandler.*
 import net.graphmasters.multiplatform.navigation.routing.progress.RouteProgressTracker.RouteProgress
 import net.graphmasters.multiplatform.navigation.routing.state.NavigationStateProvider.*
+import net.graphmasters.multiplatform.navigation.ui.audio.VoiceInstructionComponent
 import net.graphmasters.multiplatform.navigation.ui.camera.CameraSdk
 import net.graphmasters.multiplatform.navigation.ui.camera.CameraUpdate
 import net.graphmasters.multiplatform.navigation.ui.camera.NavigationCameraHandler
@@ -129,6 +130,8 @@ class MainActivity : AppCompatActivity(), LocationListener,
 
     private lateinit var cameraSdk: CameraSdk
 
+    private lateinit var voiceInstructionComponent: VoiceInstructionComponent
+
     private lateinit var locationManager: LocationManager
 
     private var mapboxMap: MapboxMap? = null
@@ -160,6 +163,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
         this.initMapbox(savedInstanceState)
         this.initNavigationSdk()
         this.initCameraSdk()
+        this.initVoiceInstructionComponent()
     }
 
     private fun showVehicleConfigSelection() {
@@ -253,6 +257,13 @@ class MainActivity : AppCompatActivity(), LocationListener,
         this.navigationSdk.navigationEventHandler.addOnOffRouteListener(this)
     }
 
+    private fun initVoiceInstructionComponent() {
+        this.voiceInstructionComponent = VoiceInstructionComponent.init(
+            this,
+            this.navigationSdk
+        )
+    }
+
     @SuppressLint("MissingPermission")
     private fun enableMapboxLocationComponent(mapboxMap: MapboxMap, style: Style) {
         val locationComponent: LocationComponent = mapboxMap.locationComponent
@@ -261,10 +272,10 @@ class MainActivity : AppCompatActivity(), LocationListener,
             LocationComponentActivationOptions.builder(this, style)
                 .useDefaultLocationEngine(false)
                 .build()
-        locationComponent.activateLocationComponent(locationComponentActivationOptions);
+        locationComponent.activateLocationComponent(locationComponentActivationOptions)
 
-        locationComponent.isLocationComponentEnabled = true;
-        locationComponent.renderMode = RenderMode.GPS;
+        locationComponent.isLocationComponentEnabled = true
+        locationComponent.renderMode = RenderMode.GPS
     }
 
     private fun initRouteLayer(style: Style) {
@@ -405,14 +416,15 @@ class MainActivity : AppCompatActivity(), LocationListener,
     override fun onNavigationStarted(routable: Routable) {
         Toast.makeText(this, "onNavigationStarted", Toast.LENGTH_SHORT).show()
         Log.d(TAG, "onNavigationStarted $routable")
+        this.voiceInstructionComponent.enabled = true
     }
 
     override fun onNavigationStopped() {
         Toast.makeText(this, "onNavigationStopped", Toast.LENGTH_SHORT).show()
         Log.d(TAG, "onNavigationStopped")
-
         this.cameraMode = CameraMode.FREE
         this.navigationInfoCard.visibility = View.GONE
+        this.voiceInstructionComponent.enabled = false
     }
 
     override fun onDestinationReached(routable: Routable) {
