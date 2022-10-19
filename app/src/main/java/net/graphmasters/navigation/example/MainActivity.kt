@@ -154,8 +154,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
         Mapbox.getInstance(this, null, WellKnownTileServer.MapLibre)
 
         this.binding = ActivityMainBinding.inflate(layoutInflater)
-        val view = this.binding.root
-        setContentView(view)
+        setContentView(this.binding.root)
 
         this.binding.vehicleConfigButton.setOnClickListener {
             this.showVehicleConfigSelection()
