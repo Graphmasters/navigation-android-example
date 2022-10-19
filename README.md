@@ -18,7 +18,7 @@ this.navigationSdk = NavigationSdk(
 )
 ```
 
-1. For map rendering you need to apply the NUNAV map style url in the app's `build.gradle` ...
+2. For map rendering you need to apply the NUNAV map style url in the app's `build.gradle` ...
 ```
 buildConfigField "String", "MAP_STYLE_URL", "\"" + System.getenv("MAP_STYLE_URL") + "\""
 ```

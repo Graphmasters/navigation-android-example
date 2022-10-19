@@ -29,7 +29,6 @@ import com.mapbox.mapboxsdk.style.layers.LineLayer
 import com.mapbox.mapboxsdk.style.layers.Property
 import com.mapbox.mapboxsdk.style.layers.PropertyFactory.*
 import com.mapbox.mapboxsdk.style.sources.GeoJsonSource
-import kotlinx.android.synthetic.main.activity_main.*
 import net.graphmasters.multiplatform.core.model.LatLng
 import net.graphmasters.multiplatform.core.units.Duration
 import net.graphmasters.multiplatform.core.units.Length
@@ -49,6 +48,7 @@ import net.graphmasters.multiplatform.navigation.vehicle.CarConfig
 import net.graphmasters.multiplatform.navigation.vehicle.MotorbikeConfig
 import net.graphmasters.multiplatform.navigation.vehicle.TruckConfig
 import net.graphmasters.multiplatform.navigation.vehicle.VehicleConfig
+import net.graphmasters.navigation.example.databinding.ActivityMainBinding
 import net.graphmasters.navigation.example.utils.EntityConverter
 import net.graphmasters.navigation.example.utils.SystemUtils
 
@@ -98,14 +98,14 @@ class MainActivity : AppCompatActivity(), LocationListener,
             when (value) {
                 CameraMode.FREE -> {
                     this.cameraSdk.navigationCameraHandler.stopCameraTracking()
-                    this.navigationInfoCard?.visibility = View.GONE
-                    this.positionButton?.visibility = View.VISIBLE
+                    this.binding.navigationInfoCard.visibility = View.GONE
+                    this.binding.positionButton.visibility = View.VISIBLE
                 }
                 CameraMode.FOLLOW -> {
                     this.cameraSdk.navigationCameraHandler.startCameraTracking()
-                    this.navigationInfoCard?.visibility =
+                    this.binding.navigationInfoCard.visibility =
                         if (navigating) View.VISIBLE else View.GONE
-                    this.positionButton?.visibility = View.GONE
+                    this.binding.positionButton.visibility = View.GONE
                 }
             }
         }
@@ -115,7 +115,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
             field = value
 
             this.navigationSdk.vehicleConfig = value
-            this.vehicleConfigButton.setImageResource(
+            this.binding.vehicleConfigButton.setImageResource(
                 when (value) {
                     is TruckConfig -> R.drawable.ic_round_truck_24
                     is MotorbikeConfig -> R.drawable.ic_round_bike_24
@@ -134,6 +134,8 @@ class MainActivity : AppCompatActivity(), LocationListener,
 
     private lateinit var locationManager: LocationManager
 
+    private lateinit var binding: ActivityMainBinding
+
     private var mapboxMap: MapboxMap? = null
 
     private var lastLocation: Location? = null
@@ -149,14 +151,16 @@ class MainActivity : AppCompatActivity(), LocationListener,
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        Mapbox.getInstance(this, null, WellKnownTileServer.MapLibre);
-        setContentView(R.layout.activity_main)
+        Mapbox.getInstance(this, null, WellKnownTileServer.MapLibre)
 
-        this.vehicleConfigButton.setOnClickListener {
+        this.binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(this.binding.root)
+
+        this.binding.vehicleConfigButton.setOnClickListener {
             this.showVehicleConfigSelection()
         }
 
-        this.positionButton.setOnClickListener {
+        this.binding.positionButton.setOnClickListener {
             this.cameraMode = CameraMode.FOLLOW
         }
 
@@ -187,8 +191,8 @@ class MainActivity : AppCompatActivity(), LocationListener,
     }
 
     private fun initMapbox(savedInstanceState: Bundle?) {
-        mapView?.onCreate(savedInstanceState)
-        mapView?.getMapAsync { mapboxMap ->
+        this.binding.mapView.onCreate(savedInstanceState)
+        this.binding.mapView.getMapAsync { mapboxMap ->
             mapboxMap.setStyle(BuildConfig.MAP_STYLE_URL) {
                 Log.d(TAG, "Map ready")
                 this.mapboxMap = mapboxMap
@@ -324,37 +328,37 @@ class MainActivity : AppCompatActivity(), LocationListener,
 
     public override fun onResume() {
         super.onResume()
-        mapView?.onResume()
+        this.binding.mapView.onResume()
     }
 
     override fun onStart() {
         super.onStart()
-        mapView?.onStart()
+        this.binding.mapView.onStart()
     }
 
     override fun onStop() {
         super.onStop()
-        mapView?.onStop()
+        this.binding.mapView.onStop()
     }
 
     public override fun onPause() {
         super.onPause()
-        mapView?.onPause()
+        this.binding.mapView.onPause()
     }
 
     override fun onLowMemory() {
         super.onLowMemory()
-        mapView?.onLowMemory()
+        this.binding.mapView.onLowMemory()
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        mapView?.onDestroy()
+        this.binding.mapView.onDestroy()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        mapView?.onSaveInstanceState(outState)
+        this.binding.mapView.onSaveInstanceState(outState)
     }
 
     override fun onBackPressed() {
@@ -423,7 +427,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
         Toast.makeText(this, "onNavigationStopped", Toast.LENGTH_SHORT).show()
         Log.d(TAG, "onNavigationStopped")
         this.cameraMode = CameraMode.FREE
-        this.navigationInfoCard.visibility = View.GONE
+        this.binding.navigationInfoCard.visibility = View.GONE
         this.voiceInstructionComponent.enabled = false
     }
 
@@ -456,7 +460,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
         Log.d(TAG, "onNavigationStateInitialized $navigationState")
 
         this.cameraMode = CameraMode.FOLLOW
-        this.navigationInfoCard.visibility = View.VISIBLE
+        this.binding.navigationInfoCard.visibility = View.VISIBLE
     }
 
     override fun onNavigationStateUpdated(navigationState: NavigationState) {
@@ -488,13 +492,14 @@ class MainActivity : AppCompatActivity(), LocationListener,
         }
     }
 
+    @SuppressLint("SetTextI18n")
     private fun updateNavigationInfoViews(routeProgress: RouteProgress) {
-        this.nextMilestone.text = routeProgress.nextMilestone?.turnInfo?.turnCommand?.name
-        this.nextMilestoneDistance.text =
+        this.binding.nextMilestone.text = routeProgress.nextMilestone?.turnInfo?.turnCommand?.name
+        this.binding.nextMilestoneDistance.text =
             "${routeProgress.nextMilestoneDistance.meters().toInt()}m"
-        this.distanceDestination.text =
+        this.binding.distanceDestination.text =
             "${routeProgress.remainingDistance.meters().toInt()}m"
-        this.remainingTravelTime.text = "${routeProgress.remainingTravelTime.minutes()}min"
+        this.binding.remainingTravelTime.text = "${routeProgress.remainingTravelTime.minutes()}min"
     }
 
     private fun drawRoute(polyline: List<LatLng>) {
