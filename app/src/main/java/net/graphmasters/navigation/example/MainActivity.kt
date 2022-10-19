@@ -163,10 +163,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
         this.initMapbox(savedInstanceState)
         this.initNavigationSdk()
         this.initCameraSdk()
-        this.voiceInstructionComponent = VoiceInstructionComponent.Companion.init(
-            this,
-            this.navigationSdk
-        )
+        this.initVoiceInstructionComponent()
     }
 
     private fun showVehicleConfigSelection() {
@@ -258,6 +255,13 @@ class MainActivity : AppCompatActivity(), LocationListener,
         this.navigationSdk.navigationEventHandler.addOnDestinationReachedListener(this)
         this.navigationSdk.navigationEventHandler.addOnLeavingDestinationListener(this)
         this.navigationSdk.navigationEventHandler.addOnOffRouteListener(this)
+    }
+
+    private fun initVoiceInstructionComponent() {
+        this.voiceInstructionComponent = VoiceInstructionComponent.init(
+            this,
+            this.navigationSdk
+        )
     }
 
     @SuppressLint("MissingPermission")
