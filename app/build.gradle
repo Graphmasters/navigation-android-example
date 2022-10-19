@@ -55,7 +55,7 @@ dependencies {
 
     implementation('net.graphmasters.multiplatform:multiplatform-core-aar:1.11.5')
     implementation('net.graphmasters.multiplatform:multiplatform-navigation-aar:1.26.24')
-    implementation('net.graphmasters.multiplatform:multiplatform-navigation-ui-aar:1.22.6-281-create-voice-instruction-component-SNAPSHOT') { transitive false }
+    implementation('net.graphmasters.multiplatform:multiplatform-navigation-ui-aar:1.22.7') { transitive false }
 
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.3.9'
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
