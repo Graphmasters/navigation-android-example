@@ -17,7 +17,6 @@ allprojects {
         mavenCentral()
 
         maven { url = "https://artifactory.graphmasters.net/artifactory/libs-release" }
-        maven { url = "https://artifactory.graphmasters.net/artifactory/libs-snapshot" }
 
         maven {
             url 'https://api.mapbox.com/downloads/v2/releases/maven'
