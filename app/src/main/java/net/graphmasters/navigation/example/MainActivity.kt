@@ -415,8 +415,8 @@ class MainActivity : AppCompatActivity(), LocationListener,
 
     override fun onNavigationStarted(routable: Routable) {
         Toast.makeText(this, "onNavigationStarted", Toast.LENGTH_SHORT).show()
-        this.voiceInstructionComponent?.enabled = true
         Log.d(TAG, "onNavigationStarted $routable")
+        this.voiceInstructionComponent?.enabled = true
     }
 
     override fun onNavigationStopped() {
