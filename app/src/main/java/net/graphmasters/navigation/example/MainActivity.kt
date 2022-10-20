@@ -97,12 +97,12 @@ class MainActivity : AppCompatActivity(), LocationListener,
 
             when (value) {
                 CameraMode.FREE -> {
-                    this.cameraSdk.navigationCameraHandler.stopCameraTracking()
+                    this.stopCameraTracking()
                     this.binding.navigationInfoCard.visibility = View.GONE
                     this.binding.positionButton.visibility = View.VISIBLE
                 }
                 CameraMode.FOLLOW -> {
-                    this.cameraSdk.navigationCameraHandler.startCameraTracking()
+                    this.startCameraTracking()
                     this.binding.navigationInfoCard.visibility =
                         if (navigating) View.VISIBLE else View.GONE
                     this.binding.positionButton.visibility = View.GONE
@@ -512,6 +512,14 @@ class MainActivity : AppCompatActivity(), LocationListener,
         // Attach listener and you will be notified about new camera updates
         this.cameraComponent.addCameraUpdateListener(this)
         this.cameraComponent.addCameraTrackingListener(this)
+    }
+
+    private fun stopCameraTracking() {
+        this.cameraComponent.stopCameraTracking()
+    }
+
+    private fun startCameraTracking() {
+        this.cameraComponent.startCameraTracking()
     }
 
     override fun onCameraUpdateReady(cameraUpdate: CameraUpdate) {
