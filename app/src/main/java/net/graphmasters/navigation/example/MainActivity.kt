@@ -41,7 +41,7 @@ import net.graphmasters.multiplatform.navigation.routing.events.NavigationEventH
 import net.graphmasters.multiplatform.navigation.routing.progress.RouteProgressTracker.RouteProgress
 import net.graphmasters.multiplatform.navigation.routing.state.NavigationStateProvider.*
 import net.graphmasters.multiplatform.navigation.ui.audio.VoiceInstructionComponent
-import net.graphmasters.multiplatform.navigation.ui.camera.CameraSdk
+import net.graphmasters.multiplatform.navigation.ui.camera.CameraComponent
 import net.graphmasters.multiplatform.navigation.ui.camera.CameraUpdate
 import net.graphmasters.multiplatform.navigation.ui.camera.NavigationCameraHandler
 import net.graphmasters.multiplatform.navigation.vehicle.CarConfig
@@ -128,9 +128,9 @@ class MainActivity : AppCompatActivity(), LocationListener,
 
     private lateinit var navigationSdk: NavigationSdk
 
-    private lateinit var cameraSdk: CameraSdk
-
     private lateinit var voiceInstructionComponent: VoiceInstructionComponent
+
+    private lateinit var cameraComponent: CameraComponent
 
     private lateinit var locationManager: LocationManager
 
@@ -166,7 +166,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
 
         this.initMapbox(savedInstanceState)
         this.initNavigationSdk()
-        this.initCameraSdk()
+        this.initCameraComponent()
         this.initVoiceInstructionComponent()
     }
 
@@ -506,12 +506,12 @@ class MainActivity : AppCompatActivity(), LocationListener,
         this.routeSource.setGeoJson(EntityConverter.convert(polyline))
     }
 
-    private fun initCameraSdk() {
-        this.cameraSdk = CameraSdk(this, this.navigationSdk, Duration.fromSeconds(3))
+    private fun initCameraComponent() {
+        this.cameraComponent = CameraComponent.Companion.init(this, navigationSdk)
 
         // Attach listener and you will be notified about new camera updates
-        this.cameraSdk.navigationCameraHandler.addCameraUpdateListener(this)
-        this.cameraSdk.navigationCameraHandler.addCameraTrackingListener(this)
+        this.cameraComponent.addCameraUpdateListener(this)
+        this.cameraComponent.addCameraTrackingListener(this)
     }
 
     override fun onCameraUpdateReady(cameraUpdate: CameraUpdate) {
