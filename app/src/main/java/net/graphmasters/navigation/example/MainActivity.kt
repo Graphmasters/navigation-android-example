@@ -164,7 +164,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
             this.cameraMode = CameraMode.FOLLOW
         }
 
-        this.initMapbox(savedInstanceState)
+        this.initMap(savedInstanceState)
         this.initNavigationSdk()
         this.initCameraComponent()
         this.initVoiceInstructionComponent()
@@ -190,7 +190,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
             .show()
     }
 
-    private fun initMapbox(savedInstanceState: Bundle?) {
+    private fun initMap(savedInstanceState: Bundle?) {
         this.binding.mapView.onCreate(savedInstanceState)
         this.binding.mapView.getMapAsync { mapboxMap ->
             mapboxMap.setStyle(BuildConfig.MAP_STYLE_URL) {
@@ -202,7 +202,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
 
                 this.initRouteLayer(it)
                 this.enableLocation()
-                this.enableMapboxLocationComponent(
+                this.enableMapLocationComponent(
                     mapboxMap = mapboxMap,
                     style = it
                 )
@@ -269,7 +269,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
     }
 
     @SuppressLint("MissingPermission")
-    private fun enableMapboxLocationComponent(mapboxMap: MapboxMap, style: Style) {
+    private fun enableMapLocationComponent(mapboxMap: MapboxMap, style: Style) {
         val locationComponent: LocationComponent = mapboxMap.locationComponent
 
         val locationComponentActivationOptions: LocationComponentActivationOptions =
@@ -470,7 +470,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
         navigationState.routeProgress?.let { routeProgress ->
             this.updateNavigationInfoViews(routeProgress)
 
-            // Updating the Mapbox position icon with the current location
+            // Updating the map position icon with the current location
             this.updateMapLocation(routeProgress, navigationState.onRoute)
 
             // Draw the current route on the map
@@ -523,7 +523,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
     }
 
     override fun onCameraUpdateReady(cameraUpdate: CameraUpdate) {
-        // Convert the update to the mapbox model and pass to the map
+        // Convert the update to the map model and pass to the map
         this.mapboxMap?.animateCamera(EntityConverter.convert(cameraUpdate), 4000)
     }
 
