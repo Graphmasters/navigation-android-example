@@ -405,6 +405,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
         this.navigationSdk.updateLocation(EntityConverter.convert(location))
     }
 
+    @Deprecated("Will be removed in the future", ReplaceWith("No replacement needed"))
     override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {
         Log.d(TAG, "onStatusChanged $provider")
     }
