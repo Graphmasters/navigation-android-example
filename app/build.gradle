@@ -20,7 +20,7 @@ android {
         buildConfigField "String", "NUNAV_API_KEY", "\"" + System.getenv("NUNAV_API_TOKEN") + "\""
 
         // Map style used for NUNAV services
-        buildConfigField "String", "MAP_STYLE_URL", "\"" + System.getenv("MAP_STYLE_URL") + "\""
+        buildConfigField "String", "MAP_STYLE_URL", "\"" + "https://tiles.graphmasters.net/styles/nunav-light-mobile-v1.1/style.json" + "\""
     }
 
     buildTypes {
@@ -58,6 +58,8 @@ dependencies {
 
     implementation('net.graphmasters.multiplatform:multiplatform-navigation-aar:1.27.0')
     implementation('net.graphmasters.multiplatform:multiplatform-navigation-ui-aar:1.23.1')
+
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4'
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     implementation 'org.maplibre.gl:android-sdk:9.5.2'

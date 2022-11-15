@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
@@ -16,6 +17,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.mapbox.android.gestures.MoveGestureDetector
+import com.mapbox.geojson.FeatureCollection
 import com.mapbox.mapboxsdk.Mapbox
 import com.mapbox.mapboxsdk.WellKnownTileServer
 import com.mapbox.mapboxsdk.camera.CameraPosition
@@ -25,10 +27,15 @@ import com.mapbox.mapboxsdk.location.LocationComponentActivationOptions
 import com.mapbox.mapboxsdk.location.modes.RenderMode
 import com.mapbox.mapboxsdk.maps.MapboxMap
 import com.mapbox.mapboxsdk.maps.Style
+import com.mapbox.mapboxsdk.style.expressions.Expression
 import com.mapbox.mapboxsdk.style.layers.LineLayer
 import com.mapbox.mapboxsdk.style.layers.Property
 import com.mapbox.mapboxsdk.style.layers.PropertyFactory.*
 import com.mapbox.mapboxsdk.style.sources.GeoJsonSource
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import net.graphmasters.multiplatform.core.logging.GMLog
 import net.graphmasters.multiplatform.core.model.LatLng
 import net.graphmasters.multiplatform.core.units.Duration
 import net.graphmasters.multiplatform.core.units.Length
@@ -44,6 +51,8 @@ import net.graphmasters.multiplatform.navigation.ui.audio.VoiceInstructionCompon
 import net.graphmasters.multiplatform.navigation.ui.camera.CameraComponent
 import net.graphmasters.multiplatform.navigation.ui.camera.CameraUpdate
 import net.graphmasters.multiplatform.navigation.ui.camera.NavigationCameraHandler
+import net.graphmasters.multiplatform.navigation.ui.map.route.feature.RelativeSpeedRouteFeatureCreator
+import net.graphmasters.multiplatform.navigation.ui.map.route.feature.RouteFeatureCreator
 import net.graphmasters.multiplatform.navigation.vehicle.CarConfig
 import net.graphmasters.multiplatform.navigation.vehicle.MotorbikeConfig
 import net.graphmasters.multiplatform.navigation.vehicle.TruckConfig
@@ -69,7 +78,9 @@ class MainActivity : AppCompatActivity(), LocationListener,
         const val LOCATION_PERMISSION_REQUEST_CODE = 1
         const val ROUTE_OUTLINE_LAYER_ID = "route-outline-layer"
         const val ROUTE_LINE_LAYER_ID = "route-layer"
-        const val ROUTE_SOURCE_ID = "route-source"
+        const val ROUTE_SOURCE_ID = "route-default-source"
+        const val ROUTE_YELLOW_SOURCE = "route-yellow-source"
+        const val ROUTE_RED_SOURCE = "route-red-source"
 
         // Predefined truck config. All the parameters are freely customizable
         private val TRUCK_CONFIG = TruckConfig(
@@ -125,6 +136,10 @@ class MainActivity : AppCompatActivity(), LocationListener,
         }
 
     private lateinit var routeSource: GeoJsonSource
+
+    private lateinit var routeYellowSource: GeoJsonSource
+
+    private lateinit var routeRedSource: GeoJsonSource
 
     private lateinit var navigationSdk: NavigationSdk
 
@@ -201,12 +216,118 @@ class MainActivity : AppCompatActivity(), LocationListener,
                 mapboxMap.addOnMapClickListener(this)
 
                 this.initRouteLayer(it)
+                this.initDashLayer(it)
                 this.enableLocation()
                 this.enableMapLocationComponent(
                     mapboxMap = mapboxMap,
                     style = it
                 )
             }
+        }
+    }
+
+    private fun initRouteLayer(style: Style) {
+        //Creating source, which will be manipulated to display route changes
+        this.routeSource = GeoJsonSource(ROUTE_SOURCE_ID)
+        style.addSource(this.routeSource)
+
+        this.routeYellowSource = GeoJsonSource(ROUTE_YELLOW_SOURCE)
+        style.addSource(this.routeYellowSource)
+
+        this.routeRedSource = GeoJsonSource(ROUTE_RED_SOURCE)
+        style.addSource(this.routeRedSource)
+
+        //Setup outline layer for the route
+        style.addLayer(
+            LineLayer(ROUTE_OUTLINE_LAYER_ID, ROUTE_SOURCE_ID).withProperties(
+                lineColor("#005f97"),
+                lineWidth(13f),
+                lineCap(Property.LINE_CAP_ROUND),
+                lineJoin(Property.LINE_JOIN_ROUND)
+            )
+        )
+
+        //Setup inner line layer for the route
+        style.addLayer(
+            LineLayer(ROUTE_LINE_LAYER_ID, ROUTE_SOURCE_ID).withProperties(
+                lineColor(Expression.get("line-color")),
+                lineWidth(10f),
+                lineCap(Property.LINE_CAP_BUTT),
+                lineJoin(Property.LINE_JOIN_ROUND)
+            )
+        )
+    }
+
+    private fun initDashLayer(style: Style) {
+//        style.addLayer(LineLayer("dash-line-blue-layer", ROUTE_SOURCE_ID).withProperties(
+//            lineColor(Color.parseColor("#005f97")),
+//            lineWidth(10f),
+//            lineDasharray(arrayOf(5f, 3f)),
+//        ).also {
+//            it.minZoom = 10f
+//        })
+
+        style.addLayer(LineLayer("dash-line-yellow-layer", ROUTE_YELLOW_SOURCE).withProperties(
+            lineColor(Color.parseColor("#e67e22")),
+            lineWidth(10f),
+            lineDasharray(arrayOf(5f, 3f)),
+            lineCap(Property.LINE_CAP_BUTT),
+            lineJoin(Property.LINE_JOIN_ROUND)
+        ).also {
+            it.minZoom = 14f
+        })
+
+        style.addLayer(LineLayer("dash-line-red-layer", ROUTE_RED_SOURCE).withProperties(
+            lineColor(Color.parseColor("#e74c3c")),
+            lineWidth(10f),
+            lineDasharray(arrayOf(5f, 3f)),
+            lineCap(Property.LINE_CAP_BUTT),
+            lineJoin(Property.LINE_JOIN_ROUND)
+        ).also {
+            it.minZoom = 14f
+        })
+
+//        this.startAnimation(style, "dash-line-blue-layer", 30)
+        this.startAnimation("dash-line-yellow-layer", 80)
+        this.startAnimation("dash-line-red-layer", 120)
+    }
+
+    private fun startAnimation(layerId: String, steps: Int) {
+        MainScope().launch {
+            val dashLength = 1f
+            val gapLength = 1f
+
+            val dashSteps = steps * dashLength / (gapLength + dashLength)
+            val gapSteps = steps - dashSteps
+
+            var step = steps;
+            while (true) {
+                step -= 1
+                if (step == 0) step = steps
+                val dashArray = calculateDashArray(step, dashSteps, dashLength, gapLength, gapSteps)
+
+                mapboxMap?.style?.getLayerAs<LineLayer>(layerId)?.withProperties(
+                    lineDasharray(dashArray)
+                )
+
+                delay(16)
+            }
+        }
+    }
+
+    private fun calculateDashArray(
+        step: Int,
+        dashSteps: Float,
+        dashLength: Float,
+        gapLength: Float,
+        gapSteps: Float
+    ): Array<Float> {
+        return if (step < dashSteps) {
+            val t = step / dashSteps
+            arrayOf((1 - t) * dashLength, gapLength, t * dashLength, 0f)
+        } else {
+            val t = (step - dashSteps) / gapSteps
+            arrayOf(0f, (1f - t) * gapLength, dashLength, t * gapLength)
         }
     }
 
@@ -282,31 +403,6 @@ class MainActivity : AppCompatActivity(), LocationListener,
         locationComponent.renderMode = RenderMode.GPS
     }
 
-    private fun initRouteLayer(style: Style) {
-        //Creating source, which will be manipulated to display route changes
-        this.routeSource = GeoJsonSource(ROUTE_SOURCE_ID)
-        style.addSource(this.routeSource)
-
-        //Setup outline layer for the route
-        style.addLayer(
-            LineLayer(ROUTE_OUTLINE_LAYER_ID, ROUTE_SOURCE_ID).withProperties(
-                lineColor("#005f97"),
-                lineWidth(13f),
-                lineCap(Property.LINE_CAP_ROUND),
-                lineJoin(Property.LINE_JOIN_ROUND)
-            )
-        )
-
-        //Setup inner line layer for the route
-        style.addLayer(
-            LineLayer(ROUTE_LINE_LAYER_ID, ROUTE_SOURCE_ID).withProperties(
-                lineColor("#4b8cc8"),
-                lineWidth(10f),
-                lineCap(Property.LINE_CAP_ROUND),
-                lineJoin(Property.LINE_JOIN_ROUND)
-            )
-        )
-    }
 
     private fun moveCameraCurrentPosition() {
         this.lastLocation?.let {
@@ -476,6 +572,44 @@ class MainActivity : AppCompatActivity(), LocationListener,
 
             // Draw the current route on the map
             this.drawRoute(routeProgress.route.waypoints.map { it.latLng })
+
+            val createFeatures =
+                RelativeSpeedRouteFeatureCreator().createFeatures(routeProgress.route.waypoints)
+
+            this.routeSource.setGeoJson(FeatureCollection.fromFeatures(createFeatures.map { routeFeature ->
+                EntityConverter.convert(routeFeature.polyline).also {
+                    it.addStringProperty(
+                        "line-color",
+                        routeFeature.properties[RouteFeatureCreator.FILL_COLOR] as String
+                    )
+                }
+            }))
+
+            val map = createFeatures.groupBy {
+                it.properties[RouteFeatureCreator.FILL_COLOR] as? String ?: "no-value"
+            }.mapValues {
+                it.value.map { it.polyline }
+            }
+
+
+            GMLog.d("map: ${map.size}")
+
+            map.forEach {
+                val featureCollection = FeatureCollection.fromFeatures(it.value.map {
+                    EntityConverter.convert(it)
+                })
+
+                when (it.key) {
+                    "#F2B450" -> {
+                        Log.d(
+                            "DEBUG",
+                            "Drawing in ${it.key} -> ${featureCollection.features()?.size}"
+                        )
+                        this.routeYellowSource.setGeoJson(featureCollection)
+                    }
+                    "#D44646" -> this.routeRedSource.setGeoJson(featureCollection)
+                }
+            }
         }
     }
 
