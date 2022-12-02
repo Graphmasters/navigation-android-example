@@ -15,7 +15,7 @@ import net.graphmasters.multiplatform.navigation.ui.camera.CameraUpdate
 object EntityConverter {
 
     fun convert(location: AndroidLocation): Location = Location(
-        provider = location.provider,
+        provider = location.provider ?: "no-provider",
         timestamp = location.time,
         latLng = LatLng(location.latitude, location.longitude),
         altitude = if (location.hasAltitude()) Length.fromMeters(location.altitude) else null,

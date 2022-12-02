@@ -41,6 +41,8 @@ import net.graphmasters.multiplatform.navigation.routing.events.NavigationEventH
 import net.graphmasters.multiplatform.navigation.routing.progress.RouteProgressTracker.RouteProgress
 import net.graphmasters.multiplatform.navigation.routing.state.NavigationStateProvider.*
 import net.graphmasters.multiplatform.navigation.ui.audio.VoiceInstructionComponent
+import net.graphmasters.multiplatform.navigation.ui.audio.config.AudioConfig
+import net.graphmasters.multiplatform.navigation.ui.audio.config.AudioConfigProvider
 import net.graphmasters.multiplatform.navigation.ui.camera.CameraComponent
 import net.graphmasters.multiplatform.navigation.ui.camera.CameraUpdate
 import net.graphmasters.multiplatform.navigation.ui.camera.NavigationCameraHandler
@@ -263,8 +265,20 @@ class MainActivity : AppCompatActivity(), LocationListener,
 
     private fun initVoiceInstructionComponent() {
         this.voiceInstructionComponent = VoiceInstructionComponent.init(
-            this,
-            this.navigationSdk
+            context = this,
+            navigationSdk = this.navigationSdk,
+            // The AudioConfigProvider is optional, but gives more freedom to the audio output of choice
+            audioConfigProvider = object : AudioConfigProvider {
+                private val option = "android_auto"
+
+                override val audioConfig: AudioConfig
+                    get() = when (option) {
+                        "voice_call" -> AudioConfig.Factory.craetaVoiceCallConfig()
+                        "android_auto" -> AudioConfig.Factory.createAndroidAutoConfig()
+                        else -> AudioConfig.Factory.craetaDeviceOnlyConfig()
+                    }
+
+            }
         )
     }
 
