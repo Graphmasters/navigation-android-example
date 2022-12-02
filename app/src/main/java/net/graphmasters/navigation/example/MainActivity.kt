@@ -278,7 +278,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
         })
 
         style.addLayer(LineLayer("dash-line-red-layer", ROUTE_RED_SOURCE).withProperties(
-            lineColor(Color.parseColor("#e74c3c")),
+            lineColor(Color.parseColor("#b71540")),
             lineWidth(10f),
             lineDasharray(arrayOf(5f, 3f)),
             lineCap(Property.LINE_CAP_BUTT),
@@ -289,22 +289,20 @@ class MainActivity : AppCompatActivity(), LocationListener,
 
 //        this.startAnimation(style, "dash-line-blue-layer", 30)
         this.startAnimation("dash-line-yellow-layer", 80)
-        this.startAnimation("dash-line-red-layer", 120)
+        this.startAnimation("dash-line-red-layer", 120, 0.5f)
     }
 
-    private fun startAnimation(layerId: String, steps: Int) {
+    private fun startAnimation(layerId: String, steps: Int, stepLength: Float = 1f) {
         MainScope().launch {
-            val dashLength = 1f
-            val gapLength = 1f
-
-            val dashSteps = steps * dashLength / (gapLength + dashLength)
+            val dashSteps = steps * stepLength / (stepLength + stepLength)
             val gapSteps = steps - dashSteps
+            var step = steps
 
-            var step = steps;
             while (true) {
                 step -= 1
                 if (step == 0) step = steps
-                val dashArray = calculateDashArray(step, dashSteps, dashLength, gapLength, gapSteps)
+                val dashArray =
+                    calculateDashArray(step, dashSteps, stepLength, stepLength, gapSteps)
 
                 mapboxMap?.style?.getLayerAs<LineLayer>(layerId)?.withProperties(
                     lineDasharray(dashArray)
