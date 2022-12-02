@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-20.04-8cores-32GB
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout the code
         uses: actions/checkout@v2
