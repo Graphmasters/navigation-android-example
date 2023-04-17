@@ -35,7 +35,6 @@ import net.graphmasters.multiplatform.core.units.Length
 import net.graphmasters.multiplatform.navigation.AndroidNavigationSdk
 import net.graphmasters.multiplatform.navigation.NavigationSdk
 import net.graphmasters.multiplatform.navigation.model.Routable
-import net.graphmasters.multiplatform.navigation.model.RoutableFactory
 import net.graphmasters.multiplatform.navigation.model.Route
 import net.graphmasters.multiplatform.navigation.routing.events.NavigationEventHandler.*
 import net.graphmasters.multiplatform.navigation.routing.progress.RouteProgressTracker.RouteProgress
@@ -46,10 +45,10 @@ import net.graphmasters.multiplatform.navigation.ui.audio.config.AudioConfigProv
 import net.graphmasters.multiplatform.navigation.ui.camera.CameraComponent
 import net.graphmasters.multiplatform.navigation.ui.camera.CameraUpdate
 import net.graphmasters.multiplatform.navigation.ui.camera.NavigationCameraHandler
-import net.graphmasters.multiplatform.navigation.vehicle.CarConfig
-import net.graphmasters.multiplatform.navigation.vehicle.MotorbikeConfig
-import net.graphmasters.multiplatform.navigation.vehicle.TruckConfig
-import net.graphmasters.multiplatform.navigation.vehicle.VehicleConfig
+import net.graphmasters.multiplatform.navigation.vehicle.*
+import net.graphmasters.multiplatform.navigation.vehicle.Templates.CAR
+import net.graphmasters.multiplatform.navigation.vehicle.Templates.MOTORBIKE
+import net.graphmasters.multiplatform.navigation.vehicle.Templates.TRUCK
 import net.graphmasters.navigation.example.databinding.ActivityMainBinding
 import net.graphmasters.navigation.example.utils.EntityConverter
 import net.graphmasters.navigation.example.utils.SystemUtils
@@ -75,18 +74,16 @@ class MainActivity : AppCompatActivity(), LocationListener,
 
         // Predefined truck config. All the parameters are freely customizable
         private val TRUCK_CONFIG = TruckConfig(
-            weightKg = 13000.0,
-            height = Length.fromMeters(3.5),
-            width = Length.fromMeters(2.5),
-            length = Length.fromMeters(16.5),
-            trailerCount = 1
+            properties = VehicleConfig.Properties(
+                dimensions = VehicleConfig.Dimensions(
+                    width = Length.fromMeters(2.5),
+                    height = Length.fromMeters(3.5),
+                    length = Length.fromMeters(6.0)
+                ),
+                weightKg = 17000.0,
+            ),
+            numberOfTrailers = 1,
         )
-
-        // Default car config. Does not allow for specific vehicle properties yet
-        private val CAR_CONFIG = CarConfig()
-
-        // Default motorbike config. Does not allow for specific vehicle properties yet
-        private val MOTORBIKE_CONFIG = MotorbikeConfig()
     }
 
     enum class CameraMode {
@@ -112,18 +109,22 @@ class MainActivity : AppCompatActivity(), LocationListener,
             }
         }
 
-    private var vehicleConfig: VehicleConfig = CAR_CONFIG
+    private var vehicleConfig: VehicleConfig = CAR
         set(value) {
+            val changed = field != value
             field = value
 
-            this.navigationSdk.vehicleConfig = value
             this.binding.vehicleConfigButton.setImageResource(
-                when (value) {
-                    is TruckConfig -> R.drawable.ic_round_truck_24
-                    is MotorbikeConfig -> R.drawable.ic_round_bike_24
+                when (value.name) {
+                    TRUCK.name -> R.drawable.ic_round_truck_24
+                    MOTORBIKE.name -> R.drawable.ic_round_bike_24
                     else -> R.drawable.ic_round_car_24
                 }
             )
+
+            if (changed && this.navigating) {
+                this.stopNavigation()
+            }
         }
 
     private lateinit var routeSource: GeoJsonSource
@@ -175,17 +176,18 @@ class MainActivity : AppCompatActivity(), LocationListener,
     private fun showVehicleConfigSelection() {
         AlertDialog.Builder(this)
             .setSingleChoiceItems(
-                arrayOf("Car", "Truck", "Motorbike"), when (this.vehicleConfig) {
-                    is TruckConfig -> 1
-                    is MotorbikeConfig -> 2
+                arrayOf(CAR.name, TRUCK.name, MOTORBIKE.name),
+                when (this.vehicleConfig.name) {
+                    TRUCK.name -> 1
+                    MOTORBIKE.name -> 2
                     else -> 0
                 }
             ) { dialog, which ->
                 dialog.dismiss()
                 this.vehicleConfig = when (which) {
                     1 -> TRUCK_CONFIG
-                    2 -> MOTORBIKE_CONFIG
-                    else -> CAR_CONFIG
+                    2 -> MOTORBIKE
+                    else -> CAR
                 }
             }
             .setNeutralButton("Cancel") { dialog, _ -> dialog.dismiss() }
@@ -239,13 +241,8 @@ class MainActivity : AppCompatActivity(), LocationListener,
     }
 
     private fun initNavigationSdk() {
-        this.navigationSdk = AndroidNavigationSdk(
-            context = this,
-            apiKey = BuildConfig.NUNAV_API_KEY
-        )
-
-        // The currently used vehicle config can be set at any time before or during the routing, altering the route request and returning an appropriate route
-        this.navigationSdk.vehicleConfig = this.vehicleConfig
+        // Initializes the Navigation SDK. Future calls to getInstance will return the same instance.
+        this.navigationSdk = AndroidNavigationSdk.getInstance(this, BuildConfig.NUNAV_API_KEY)
 
         // Navigation state provides all necessary info about the current routing session.
         // By registering listeners you can be informed about any changes.
@@ -373,15 +370,6 @@ class MainActivity : AppCompatActivity(), LocationListener,
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         this.binding.mapView.onSaveInstanceState(outState)
-    }
-
-    override fun onBackPressed() {
-        if (this.navigating) {
-            this.navigationSdk.navigationEngine.stopNavigation()
-            this.drawRoute(emptyList())
-        } else {
-            super.onBackPressed()
-        }
     }
 
     override fun onRequestPermissionsResult(
@@ -553,16 +541,39 @@ class MainActivity : AppCompatActivity(), LocationListener,
     override fun onMapLongClick(point: com.mapbox.mapboxsdk.geometry.LatLng): Boolean {
         SystemUtils.vibrate(this, Duration.fromMilliseconds(200))
 
+        val latLng = LatLng(point.latitude, point.longitude)
+        this.startNavigation(latLng)
+
+        return true
+    }
+
+
+    /**
+     * Starts the navigation to the given [latLng] and the currently selected [vehicleConfig]
+     */
+    private fun startNavigation(latLng: LatLng) {
         try {
-            this.navigationSdk.navigationEngine.startNavigation(
-                RoutableFactory.create(LatLng(point.latitude, point.longitude))
+            this.navigationSdk.startNavigation(
+                latLng,
+                this.vehicleConfig
             )
         } catch (e: Exception) {
             Toast.makeText(this, e.message, Toast.LENGTH_LONG).show()
             e.printStackTrace()
         }
+    }
 
-        return true
+    override fun onBackPressed() {
+        if (this.navigating) {
+            this.stopNavigation()
+        } else {
+            super.onBackPressed()
+        }
+    }
+
+    private fun stopNavigation() {
+        this.navigationSdk.stopNavigation()
+        this.drawRoute(emptyList())
     }
 
     override fun onMoveBegin(detector: MoveGestureDetector) {}
