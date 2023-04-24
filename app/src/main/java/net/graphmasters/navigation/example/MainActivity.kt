@@ -152,7 +152,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
     private var lastLocation: Location? = null
 
     private val navigating: Boolean
-        get() = this.navigationSdk.navigationState != null
+        get() = this.navigationSdk.navigationActive
 
     private val locationPermissionGranted: Boolean
         get() = ContextCompat.checkSelfPermission(
