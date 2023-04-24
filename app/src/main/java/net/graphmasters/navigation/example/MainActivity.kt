@@ -37,8 +37,11 @@ import net.graphmasters.multiplatform.navigation.NavigationSdk
 import net.graphmasters.multiplatform.navigation.model.Routable
 import net.graphmasters.multiplatform.navigation.model.Route
 import net.graphmasters.multiplatform.navigation.routing.events.NavigationEventHandler.*
+import net.graphmasters.multiplatform.navigation.routing.events.NavigationResult
 import net.graphmasters.multiplatform.navigation.routing.progress.RouteProgressTracker.RouteProgress
-import net.graphmasters.multiplatform.navigation.routing.state.NavigationStateProvider.*
+import net.graphmasters.multiplatform.navigation.routing.state.NavigationState
+import net.graphmasters.multiplatform.navigation.routing.state.OnNavigationStateInitializedListener
+import net.graphmasters.multiplatform.navigation.routing.state.OnNavigationStateUpdatedListener
 import net.graphmasters.multiplatform.navigation.ui.audio.VoiceInstructionComponent
 import net.graphmasters.multiplatform.navigation.ui.audio.config.AudioConfig
 import net.graphmasters.multiplatform.navigation.ui.audio.config.AudioConfigProvider
@@ -55,15 +58,20 @@ import net.graphmasters.navigation.example.utils.SystemUtils
 
 
 class MainActivity : AppCompatActivity(), LocationListener,
-    OnNavigationStateUpdatedListener, MapboxMap.OnMapLongClickListener,
+    OnNavigationStateInitializedListener,
+    OnNavigationStateUpdatedListener,
     OnNavigationStartedListener,
     OnNavigationStoppedListener,
     OnDestinationReachedListener,
+    OnLeavingDestinationListener,
     OnRouteUpdateListener,
+    OnOffRouteListener,
     OnRouteRequestFailedListener,
-    OnNavigationStateInitializedListener, OnLeavingDestinationListener, OnOffRouteListener,
-    NavigationCameraHandler.CameraUpdateListener, MapboxMap.OnMoveListener,
-    MapboxMap.OnMapClickListener, NavigationCameraHandler.CameraTrackingListener {
+    MapboxMap.OnMapLongClickListener,
+    MapboxMap.OnMoveListener,
+    MapboxMap.OnMapClickListener,
+    NavigationCameraHandler.CameraUpdateListener,
+    NavigationCameraHandler.CameraTrackingListener {
 
     companion object {
         const val TAG = "MainActivity"
@@ -144,7 +152,7 @@ class MainActivity : AppCompatActivity(), LocationListener,
     private var lastLocation: Location? = null
 
     private val navigating: Boolean
-        get() = this.navigationSdk.navigationStateProvider.navigationState.currentlyNavigating
+        get() = this.navigationSdk.navigationState != null
 
     private val locationPermissionGranted: Boolean
         get() = ContextCompat.checkSelfPermission(
@@ -246,9 +254,9 @@ class MainActivity : AppCompatActivity(), LocationListener,
 
         // Navigation state provides all necessary info about the current routing session.
         // By registering listeners you can be informed about any changes.
-        this.navigationSdk.navigationStateProvider.addOnNavigationStateUpdatedListener(this)
+        this.navigationSdk.addOnNavigationStateUpdatedListener(this)
         // If the navigation state is initialized the RouteProgress is available, containing all relevant routing info
-        this.navigationSdk.navigationStateProvider.addOnNavigationStateInitializedListener(this)
+        this.navigationSdk.addOnNavigationStateInitializedListener(this)
 
         // Several navigation events
         this.navigationSdk.navigationEventHandler.addOnNavigationStartedListener(this)
@@ -434,8 +442,8 @@ class MainActivity : AppCompatActivity(), LocationListener,
         this.voiceInstructionComponent.enabled = false
     }
 
-    override fun onDestinationReached(routable: Routable) {
-        Log.d(TAG, "onDestinationReached $routable")
+    override fun onDestinationReached(navigationResult: NavigationResult) {
+        Log.d(TAG, "onDestinationReached $navigationResult")
     }
 
     override fun onLeavingDestination(routable: Routable) {
@@ -466,11 +474,11 @@ class MainActivity : AppCompatActivity(), LocationListener,
         this.binding.navigationInfoCard.visibility = View.VISIBLE
     }
 
-    override fun onNavigationStateUpdated(navigationState: NavigationState) {
+    override fun onNavigationStateUpdated(navigationState: NavigationState?) {
         Log.d(TAG, "onNavigationStateUpdated $navigationState")
 
         // The NavigationState contains all relevant data for the current navigation session
-        navigationState.routeProgress?.let { routeProgress ->
+        navigationState?.routeProgress?.let { routeProgress ->
             this.updateNavigationInfoViews(routeProgress)
 
             // Updating the map position icon with the current location
