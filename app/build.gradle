@@ -53,8 +53,8 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.1.4'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.0'
 
-    implementation('net.graphmasters.multiplatform:multiplatform-navigation-aar:1.32.1')
-    implementation('net.graphmasters.multiplatform:multiplatform-navigation-ui-aar:1.26.8')
+    implementation('net.graphmasters.multiplatform:multiplatform-navigation-aar:1.34.3')
+    implementation('net.graphmasters.multiplatform:multiplatform-navigation-ui-aar:1.26.16')
 
     implementation 'org.maplibre.gl:android-sdk:9.5.2'
     implementation 'com.squareup.okhttp3:okhttp:4.10.0'
