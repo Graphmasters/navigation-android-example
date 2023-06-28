@@ -492,10 +492,10 @@ class MainActivity : AppCompatActivity(), LocationListener,
     private fun updateMapLocation(routeProgress: RouteProgress, onRoute: Boolean) {
         // If the user is still on route, use the projected location of the route...
         val location = if (onRoute) {
-            routeProgress.currentLocationOnRoute
+            routeProgress.locationOnRoute
         } else {
             //... otherwise use the original gps location
-            routeProgress.currentLocationOnRoute.originalLocation
+            routeProgress.locationOnRoute.originalLocation
         }
 
         EntityConverter.convert(location).let {
@@ -505,9 +505,9 @@ class MainActivity : AppCompatActivity(), LocationListener,
 
     @SuppressLint("SetTextI18n")
     private fun updateNavigationInfoViews(routeProgress: RouteProgress) {
-        this.binding.nextMilestone.text = routeProgress.nextMilestone?.turnInfo?.turnCommand?.name
+        this.binding.nextMilestone.text = routeProgress.nextManeuver.turnInfo.turnCommand.name
         this.binding.nextMilestoneDistance.text =
-            "${routeProgress.nextMilestoneDistance.meters().toInt()}m"
+            "${routeProgress.nextManeuver.remainingDistance.meters().toInt()}m"
         this.binding.distanceDestination.text =
             "${routeProgress.remainingDistance.meters().toInt()}m"
         this.binding.remainingTravelTime.text = "${routeProgress.remainingTravelTime.minutes()}min"
